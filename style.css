@@ -1,1 +1,2499 @@
+/* ============================================================
+   BUSSY 67! — CINEMATIC SCROLLTELLING STYLES
+   ------------------------------------------------------------
+   Beginner note:
+   Most visual tuning can be done in the :root variables below.
+   ============================================================ */
 
+:root {
+  --bg: #05070c;
+  --bg-deep: #020308;
+  --text: #f7f4ec;
+  --muted: #a7adbd;
+  --line: rgba(255, 255, 255, 0.15);
+  --glass: rgba(10, 13, 21, 0.64);
+  --glass-strong: rgba(7, 9, 15, 0.9);
+  --moon: #d7d2c7;
+  --mars: #cf6f4f;
+  --cyan: #8ee9ff;
+  --gold: #f4c67a;
+  --shadow: 0 28px 90px rgba(0, 0, 0, 0.45);
+
+  --ease-cinema: cubic-bezier(0.22, 1, 0.36, 1);
+  --max-content: 1200px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--bg-deep);
+  scroll-behavior: auto;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  background: var(--bg-deep);
+  color: var(--text);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  overflow-x: hidden;
+}
+
+body.modal-open {
+  overflow: hidden;
+}
+
+button,
+a {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 5px;
+}
+
+/* ============================================================
+   FIXED UI
+   ============================================================ */
+
+.scroll-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  z-index: 1000;
+  background: transparent;
+}
+
+.scroll-progress span {
+  display: block;
+  width: 0;
+  height: 100%;
+  background: linear-gradient(90deg, var(--cyan), var(--gold), #ff8f6b);
+  transform-origin: left center;
+}
+
+.story-label {
+  position: fixed;
+  top: 28px;
+  right: 32px;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: rgba(4, 6, 11, 0.45);
+  backdrop-filter: blur(12px);
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.story-label-divider {
+  width: 16px;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.35);
+}
+
+/* ============================================================
+   SCENE FOUNDATION
+   ============================================================ */
+
+.story-scene {
+  position: relative;
+  min-height: 100svh;
+  height: 100svh;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+
+/* CHAPTER 02 — EXTENDED MOONBOUND FLIGHT
+   Add one quarter-viewport of scroll distance so the bus has more time
+   to approach the Moon. Keep the chapter copy within the original
+   viewport height rather than stretching it with the longer section. */
+#scene-02 {
+  min-height: 125svh;
+  height: 125svh;
+}
+
+#scene-02 .scene-content {
+  height: 100svh;
+}
+
+/* Chapter 3 gets a little more scroll time for the lunar arrival.
+   Keep its foreground layout at one viewport tall so the copy stays
+   in its original position while the section and scrubbed 3D scene
+   continue for an additional quarter-viewport. */
+#scene-03 {
+  min-height: 125svh;
+  height: 125svh;
+}
+
+#scene-03 .scene-content {
+  height: 100svh;
+}
+
+.background-layer,
+.nebula-layer,
+.stars-layer,
+.dust-layer,
+.terrain-glow,
+.mars-horizon,
+.particle-field,
+.celestial-object {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.background-layer {
+  z-index: -10;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(35, 45, 73, 0.2), transparent 55%),
+    linear-gradient(135deg, #05070d 0%, #0b0f1b 55%, #03050a 100%);
+  background-size: cover;
+  background-position: center;
+  transform: scale(1.04);
+}
+
+.background-layer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(2, 4, 8, 0.05), rgba(2, 4, 8, 0.32)),
+    radial-gradient(circle at center, transparent 35%, rgba(0, 0, 0, 0.5) 100%);
+}
+
+.scene-moon .background-layer {
+  background:
+    linear-gradient(180deg, rgba(18, 18, 25, 0.25), rgba(5, 6, 10, 0.62)),
+    radial-gradient(circle at 60% 45%, rgba(225, 218, 199, 0.14), transparent 42%),
+    linear-gradient(145deg, #36333a, #14151b 45%, #07080c 100%);
+}
+
+.scene-mars .background-layer {
+  background:
+    linear-gradient(180deg, rgba(61, 31, 27, 0.14), rgba(30, 10, 9, 0.35)),
+    radial-gradient(circle at 68% 39%, rgba(244, 134, 84, 0.18), transparent 42%),
+    linear-gradient(145deg, #4f241e, #25110f 55%, #0a0505 100%);
+}
+
+.scene-final .background-layer {
+  background:
+    radial-gradient(circle at 50% 42%, rgba(85, 108, 150, 0.23), transparent 34%),
+    linear-gradient(180deg, #0a1020 0%, #080b13 58%, #020307 100%);
+}
+
+/* ============================================================
+   ATMOSPHERE
+   ============================================================ */
+
+.stars-layer {
+  opacity: 0.65;
+  background-image:
+    radial-gradient(circle, rgba(255, 255, 255, 0.95) 0 1px, transparent 1.4px),
+    radial-gradient(circle, rgba(142, 233, 255, 0.65) 0 1px, transparent 1.5px),
+    radial-gradient(circle, rgba(255, 217, 166, 0.7) 0 1px, transparent 1.6px);
+  background-position:
+    20px 35px,
+    180px 110px,
+    85px 200px;
+  background-size:
+    240px 220px,
+    320px 300px,
+    380px 340px;
+}
+
+.stars-a {
+  opacity: 0.55;
+}
+
+.stars-b {
+  opacity: 0.22;
+  transform: scale(1.16);
+}
+
+.nebula-layer {
+  background:
+    radial-gradient(ellipse at 23% 56%, rgba(71, 142, 255, 0.09), transparent 40%),
+    radial-gradient(ellipse at 78% 20%, rgba(191, 104, 255, 0.08), transparent 36%),
+    radial-gradient(ellipse at 52% 72%, rgba(255, 127, 69, 0.05), transparent 42%);
+  filter: blur(14px);
+}
+
+.dust-layer::before,
+.dust-layer::after,
+.particle-field::before,
+.particle-field::after {
+  content: "";
+  position: absolute;
+  inset: -20%;
+  background-image:
+    radial-gradient(circle, rgba(255, 255, 255, 0.15) 0 1px, transparent 1.5px),
+    radial-gradient(circle, rgba(255, 255, 255, 0.08) 0 1px, transparent 1.3px);
+  background-size: 190px 180px, 270px 250px;
+  opacity: 0.25;
+}
+
+.dust-layer::after,
+.particle-field::after {
+  transform: translate3d(4%, 3%, 0) scale(1.1);
+  opacity: 0.15;
+}
+
+.scene-mars .particle-field::before {
+  background-image:
+    radial-gradient(circle, rgba(239, 158, 120, 0.55) 0 1px, transparent 1.5px),
+    radial-gradient(circle, rgba(255, 203, 167, 0.25) 0 1px, transparent 1.3px);
+}
+
+.terrain-glow {
+  background:
+    radial-gradient(ellipse at 50% 85%, rgba(255, 255, 255, 0.07), transparent 33%),
+    linear-gradient(180deg, transparent 45%, rgba(7, 8, 11, 0.4) 100%);
+}
+
+.mars-horizon {
+  background:
+    radial-gradient(ellipse at 50% 80%, rgba(246, 136, 95, 0.16), transparent 38%),
+    linear-gradient(180deg, transparent 62%, rgba(24, 8, 7, 0.72) 100%);
+}
+
+/* ============================================================
+   LAYOUT
+   ============================================================ */
+
+.scene-content {
+  position: relative;
+  z-index: 5;
+  width: min(var(--max-content), calc(100% - 64px));
+  height: 100%;
+  margin: 0 auto;
+}
+
+.landing-content,
+.travel-content,
+.final-content {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.object-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: center;
+  gap: clamp(24px, 6vw, 110px);
+}
+
+.object-content-reverse {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.object-content-reverse .character-stage {
+  order: 1;
+}
+
+.object-content-reverse .object-copy {
+  order: 2;
+}
+
+.object-copy {
+  max-width: 620px;
+}
+
+.character-stage {
+  position: relative;
+  min-height: 62vh;
+  display: grid;
+  place-items: center;
+  perspective: 1000px;
+}
+
+.character-wrap {
+  position: relative;
+  z-index: 2;
+  width: min(82%, 540px);
+  transform-origin: center center;
+  filter: drop-shadow(0 30px 40px rgba(0, 0, 0, 0.42));
+}
+
+.character-image {
+  width: 100%;
+  max-height: 61vh;
+  object-fit: contain;
+}
+
+.character-fallback {
+  display: none;
+  place-items: center;
+  min-height: 180px;
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 24px;
+  background:
+    linear-gradient(135deg, rgba(142, 233, 255, 0.09), rgba(244, 198, 122, 0.07)),
+    rgba(8, 11, 18, 0.76);
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 12px;
+  line-height: 1.5;
+  letter-spacing: 0.18em;
+  text-align: center;
+  text-transform: uppercase;
+  padding: 26px;
+}
+
+.character-fallback small {
+  display: block;
+  margin-top: 8px;
+  font-size: 8px;
+  letter-spacing: 0.12em;
+  color: rgba(255, 255, 255, 0.42);
+}
+
+.character-shadow {
+  position: absolute;
+  left: 50%;
+  bottom: 11%;
+  width: min(58%, 340px);
+  height: 42px;
+  border-radius: 50%;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse, rgba(0, 0, 0, 0.55), transparent 70%);
+  filter: blur(9px);
+}
+
+.object-scene .eyebrow {
+  margin-bottom: 18px;
+}
+
+.eyebrow {
+  color: rgba(238, 244, 255, 0.62);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.24em;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
+.scene-title {
+  margin: 0;
+  max-width: 780px;
+  font-size: clamp(42px, 6vw, 88px);
+  font-weight: 700;
+  line-height: 0.95;
+  letter-spacing: -0.045em;
+  text-wrap: balance;
+}
+
+.scene-title span,
+.final-title span,
+.hero-title span {
+  display: inline-block;
+  color: transparent;
+  background: linear-gradient(120deg, #f8f3e8 10%, #9bdff0 48%, #f1bd82 85%);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+.scene-copy {
+  margin: 24px 0 0;
+  max-width: 560px;
+  color: rgba(235, 239, 247, 0.72);
+  font-size: clamp(15px, 1.55vw, 19px);
+  line-height: 1.65;
+}
+
+.object-tagline {
+  margin-bottom: 34px;
+}
+
+/* ============================================================
+   LANDING
+   ============================================================ */
+
+.scene-landing .background-base {
+  background:
+    radial-gradient(circle at 50% 62%, rgba(51, 100, 140, 0.16), transparent 26%),
+    linear-gradient(180deg, #070a12 0%, #0a0e18 50%, #04060b 100%);
+}
+
+.landing-content {
+  align-items: center;
+  text-align: center;
+  padding-top: 1vh;
+}
+
+.hero-title {
+  margin: 18px 0 12px;
+  font-size: clamp(76px, 13vw, 190px);
+  line-height: 0.78;
+  font-weight: 800;
+  letter-spacing: -0.065em;
+}
+
+.hero-title span {
+  color: transparent;
+}
+
+.hero-subtitle {
+  margin: 24px 0 30px;
+  max-width: 700px;
+  color: rgba(238, 242, 250, 0.72);
+  font-size: clamp(15px, 1.7vw, 21px);
+  line-height: 1.6;
+}
+
+.primary-button,
+.secondary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  min-height: 52px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  padding: 0 22px;
+  color: var(--text);
+  transition:
+    transform 0.35s var(--ease-cinema),
+    background 0.35s ease,
+    border-color 0.35s ease,
+    box-shadow 0.35s ease;
+}
+
+.primary-button {
+  background: linear-gradient(135deg, rgba(142, 233, 255, 0.16), rgba(244, 198, 122, 0.1));
+  box-shadow: 0 14px 50px rgba(142, 233, 255, 0.07);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+}
+
+.secondary-button {
+  background: rgba(4, 8, 13, 0.35);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.17em;
+  text-transform: uppercase;
+  backdrop-filter: blur(8px);
+}
+
+.primary-button:hover,
+.secondary-button:hover {
+  transform: translateY(-3px);
+  border-color: rgba(255, 255, 255, 0.42);
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.22);
+}
+
+.button-arrow {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.landing-note {
+  margin-top: 20px;
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.landing-bus {
+  position: absolute;
+  right: -2%;
+  bottom: -2%;
+  width: min(28vw, 380px);
+  z-index: 3;
+  transform: rotate(-1.8deg);
+  filter: drop-shadow(0 28px 48px rgba(0, 0, 0, 0.45));
+}
+
+.landing-bus img,
+.final-bus img {
+  width: 100%;
+}
+
+.scroll-cue {
+  position: absolute;
+  left: 50%;
+  bottom: 26px;
+  z-index: 7;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  transform: translateX(-50%);
+  color: rgba(255, 255, 255, 0.38);
+  font-size: 9px;
+  letter-spacing: 0.23em;
+}
+
+.scroll-line {
+  width: 1px;
+  height: 44px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.62), transparent);
+}
+
+/* ============================================================
+   SPACE TRAVEL
+   ============================================================ */
+
+.travel-content {
+  align-items: center;
+  text-align: center;
+  padding-top: 3vh;
+}
+
+.travel-content .scene-title {
+  font-size: clamp(60px, 10vw, 145px);
+}
+
+.travel-content .scene-copy {
+  max-width: 620px;
+}
+
+.travel-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 25px;
+  padding: 9px 13px;
+  border: 1px solid rgba(142, 233, 255, 0.12);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.18);
+  color: rgba(142, 233, 255, 0.72);
+  font-size: 9px;
+  letter-spacing: 0.18em;
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #8ee9ff;
+  box-shadow: 0 0 14px rgba(142, 233, 255, 0.85);
+}
+
+.travel-bus {
+  position: absolute;
+  left: 50%;
+  top: 54%;
+  z-index: 4;
+  width: min(26vw, 330px);
+  transform: translate(-50%, -50%);
+  filter: drop-shadow(0 20px 36px rgba(0, 0, 0, 0.45));
+}
+
+.travel-bus img {
+  width: 100%;
+}
+
+.celestial-object {
+  inset: auto;
+  border-radius: 50%;
+}
+
+.earth-orb,
+.home-earth-orb {
+  width: 16vw;
+  height: 16vw;
+  min-width: 130px;
+  min-height: 130px;
+  max-width: 250px;
+  max-height: 250px;
+  right: 8%;
+  top: 20%;
+  background:
+    radial-gradient(circle at 33% 30%, rgba(255,255,255,0.45), transparent 18%),
+    radial-gradient(circle at 48% 56%, #4d8ca5 0 25%, #1b3a57 55%, #07101f 72%);
+  box-shadow:
+    inset -20px -24px 60px rgba(0, 0, 0, 0.5),
+    0 0 90px rgba(90, 176, 217, 0.16);
+}
+
+.moon-orb {
+  width: 8vw;
+  height: 8vw;
+  min-width: 78px;
+  min-height: 78px;
+  right: 18%;
+  bottom: 21%;
+  background:
+    radial-gradient(circle at 32% 27%, rgba(255,255,255,0.28), transparent 16%),
+    radial-gradient(circle at 46% 51%, #a39f94 0 42%, #615f5c 65%, #26272c 100%);
+  box-shadow: 0 0 60px rgba(204, 197, 176, 0.1);
+}
+
+.mars-orb {
+  width: 10vw;
+  height: 10vw;
+  min-width: 88px;
+  min-height: 88px;
+  right: 13%;
+  top: 18%;
+  background:
+    radial-gradient(circle at 34% 29%, rgba(255,218,180,0.34), transparent 13%),
+    radial-gradient(circle at 44% 52%, #d76d4b 0 40%, #783424 68%, #28100e 100%);
+  box-shadow:
+    inset -20px -20px 40px rgba(0,0,0,0.45),
+    0 0 80px rgba(207,111,79,0.16);
+}
+
+.moon-departure {
+  width: 7vw;
+  height: 7vw;
+  min-width: 70px;
+  min-height: 70px;
+  left: 12%;
+  top: 17%;
+  background: radial-gradient(circle, #b5b0a7 0 44%, #56545a 66%, #1d1e23 100%);
+  opacity: 0.75;
+}
+
+.scene-return .home-earth-orb {
+  right: 14%;
+  top: 20%;
+}
+
+/* ============================================================
+   FINAL SCENE
+   ============================================================ */
+
+.final-content {
+  align-items: center;
+  text-align: center;
+}
+
+.final-title {
+  margin: 0;
+  font-size: clamp(72px, 13vw, 180px);
+  line-height: 0.78;
+  font-weight: 800;
+  letter-spacing: -0.07em;
+}
+
+.final-bus {
+  width: min(34vw, 450px);
+  margin: 38px auto 22px;
+  filter: drop-shadow(0 24px 44px rgba(0,0,0,0.4));
+}
+
+.final-copy {
+  margin: 0;
+  color: rgba(239, 243, 250, 0.7);
+  font-size: clamp(15px, 1.6vw, 20px);
+  line-height: 1.6;
+}
+
+/* ============================================================
+   INFORMATION MODAL
+   ============================================================ */
+
+.info-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: grid;
+  place-items: center;
+  padding: 26px;
+  visibility: hidden;
+  opacity: 0;
+}
+
+.modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(2, 4, 8, 0.76);
+  backdrop-filter: blur(15px);
+}
+
+.modal-panel {
+  position: relative;
+  z-index: 2;
+  width: min(1180px, 100%);
+  max-height: min(88svh, 900px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 28px;
+  background:
+    linear-gradient(135deg, rgba(22, 26, 38, 0.84), rgba(7, 9, 15, 0.93)),
+    var(--glass-strong);
+  box-shadow: var(--shadow);
+  scrollbar-width: thin;
+}
+
+.modal-grid {
+  display: grid;
+  grid-template-columns: 0.95fr 1.05fr;
+}
+
+.modal-close {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  z-index: 6;
+  width: 42px;
+  height: 42px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.26);
+  color: white;
+  font-size: 28px;
+  line-height: 1;
+}
+
+.modal-image-wrap {
+  position: relative;
+  min-height: 620px;
+  padding: 32px;
+  background:
+    radial-gradient(circle at 50% 38%, rgba(142, 233, 255, 0.12), transparent 36%),
+    linear-gradient(150deg, rgba(255,255,255,0.04), transparent 60%);
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.modal-image {
+  width: 100%;
+  height: 100%;
+  min-height: 540px;
+  object-fit: contain;
+  border-radius: 18px;
+}
+
+.modal-image-caption {
+  position: absolute;
+  left: 32px;
+  bottom: 28px;
+  padding: 7px 9px;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 999px;
+  background: rgba(0,0,0,0.36);
+  color: rgba(255,255,255,0.56);
+  font-size: 8px;
+  letter-spacing: 0.18em;
+}
+
+.modal-image-wrap.has-eagle-video,
+.modal-image-wrap.has-opportunity-video,
+.has-insight-video,
+.modal-image-wrap.has-spirit-video,
+.modal-image-wrap.has-lrv-video,
+.modal-image-wrap.has-surveyor-video,
+  .modal-image-wrap.has-pathfinder-video {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 20px;
+  min-height: 0;
+}
+
+.modal-image-wrap.has-eagle-video .modal-image,
+.modal-image-wrap.has-opportunity-video .modal-image,
+.modal-image-wrap.has-insight-video .modal-image,
+.modal-image-wrap.has-spirit-video .modal-image,
+.modal-image-wrap.has-lrv-video .modal-image,
+.modal-image-wrap.has-surveyor-video .modal-image,
+  .modal-image-wrap.has-pathfinder-video .modal-image {
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  max-height: 430px;
+  object-fit: contain;
+  flex: 0 0 auto;
+}
+
+.modal-image-wrap.has-eagle-video .modal-image-caption,
+.modal-image-wrap.has-opportunity-video .modal-image-caption,
+.modal-image-wrap.has-insight-video .modal-image-caption,
+.modal-image-wrap.has-spirit-video .modal-image-caption,
+.modal-image-wrap.has-lrv-video .modal-image-caption,
+.modal-image-wrap.has-surveyor-video .modal-image-caption,
+  .modal-image-wrap.has-pathfinder-video .modal-image-caption {
+  position: static;
+  align-self: flex-start;
+  margin-top: -8px;
+}
+
+.modal-video-block {
+  width: 100%;
+}
+
+.modal-video-heading {
+  margin-bottom: 10px;
+  color: rgba(255,255,255,0.58);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+}
+
+.modal-video-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 16px;
+  background: #05070b;
+}
+
+.modal-video-frame iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.modal-copy {
+  padding: 56px 54px 50px;
+}
+
+.modal-title {
+  margin: 8px 0 12px;
+  font-size: clamp(40px, 5vw, 66px);
+  line-height: 0.94;
+  letter-spacing: -0.045em;
+}
+
+.modal-intro {
+  margin: 0 0 26px;
+  max-width: 650px;
+  color: rgba(235, 239, 247, 0.68);
+  line-height: 1.65;
+}
+
+.facts-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  margin: 24px 0;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 16px;
+  overflow: hidden;
+  background: rgba(255,255,255,0.08);
+}
+
+.fact-item {
+  min-height: 94px;
+  padding: 16px;
+  background: rgba(8, 11, 18, 0.64);
+}
+
+.fact-label {
+  margin-bottom: 8px;
+  color: rgba(255,255,255,0.4);
+  font-size: 8px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.fact-value {
+  color: rgba(255,255,255,0.86);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.science-block {
+  margin-top: 24px;
+}
+
+.science-block h3 {
+  margin: 0 0 9px;
+  color: rgba(255,255,255,0.84);
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.science-block p {
+  margin: 0;
+  color: rgba(235,239,247,0.64);
+  line-height: 1.7;
+  font-size: 14px;
+}
+
+.resource-list {
+  display: grid;
+  gap: 8px;
+}
+
+.resource-link,
+.resource-placeholder {
+  display: block;
+  padding: 11px 13px;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px;
+  color: rgba(255,255,255,0.64);
+  background: rgba(255,255,255,0.025);
+  font-size: 12px;
+  text-decoration: none;
+}
+
+.resource-link:hover {
+  border-color: rgba(142,233,255,0.28);
+  color: rgba(255,255,255,0.92);
+}
+
+.resource-placeholder {
+  color: rgba(244,198,122,0.75);
+}
+
+.asset-notice {
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  z-index: 2500;
+  max-width: calc(100% - 30px);
+  padding: 9px 12px;
+  border: 1px solid rgba(244,198,122,0.18);
+  border-radius: 999px;
+  background: rgba(15, 12, 9, 0.8);
+  color: rgba(244,198,122,0.8);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 20px);
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+
+@media (max-width: 900px) {
+  .story-label {
+    top: 16px;
+    right: 16px;
+  }
+
+  .scene-content {
+    width: min(var(--max-content), calc(100% - 38px));
+  }
+
+  .object-content,
+  .object-content-reverse {
+    grid-template-columns: 1fr;
+    grid-template-rows: 0.98fr 1.02fr;
+    gap: 0;
+  }
+
+  .object-content-reverse .character-stage,
+  .object-content-reverse .object-copy,
+  .character-stage,
+  .object-copy {
+    order: initial;
+  }
+
+  .character-stage {
+    min-height: 40vh;
+    align-self: end;
+  }
+
+  .character-wrap {
+    width: min(74%, 430px);
+  }
+
+  .object-copy {
+    align-self: start;
+    max-width: 680px;
+    padding-bottom: 48px;
+  }
+
+  .scene-title {
+    font-size: clamp(40px, 8vw, 66px);
+  }
+
+  .character-image {
+    max-height: 39vh;
+  }
+
+  .modal-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .modal-image-wrap {
+    min-height: 360px;
+    max-height: 45vh;
+    border-right: 0;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+  }
+
+  .modal-image {
+    min-height: 300px;
+    max-height: 40vh;
+  }
+
+  .modal-image-wrap.has-opportunity-video {
+    min-height: 0;
+    max-height: none;
+    padding: 22px;
+  }
+
+  .modal-image-wrap.has-eagle-video .modal-image,
+.modal-image-wrap.has-opportunity-video .modal-image,
+.modal-image-wrap.has-insight-video .modal-image,
+.modal-image-wrap.has-spirit-video .modal-image {
+    min-height: 0;
+    max-height: none;
+  }
+
+  .modal-copy {
+    padding: 42px 30px 38px;
+  }
+
+  .landing-bus,
+  .final-bus {
+    width: min(44vw, 300px);
+  }
+}
+
+@media (max-width: 620px) {
+  .story-label {
+    font-size: 9px;
+    padding: 8px 10px;
+  }
+
+  .story-label-divider {
+    width: 10px;
+  }
+
+  .hero-title {
+    font-size: clamp(64px, 18vw, 110px);
+  }
+
+  .hero-subtitle {
+    max-width: 330px;
+  }
+
+  .primary-button,
+  .secondary-button {
+    min-height: 49px;
+    width: min(100%, 340px);
+  }
+
+  .landing-bus {
+    right: -13%;
+    bottom: -1%;
+    width: 54vw;
+  }
+
+  .travel-content .scene-title {
+    font-size: clamp(52px, 15vw, 88px);
+  }
+
+  .travel-bus {
+    width: 44vw;
+  }
+
+  .earth-orb,
+  .home-earth-orb {
+    width: 34vw;
+    height: 34vw;
+    right: -7%;
+    top: 12%;
+  }
+
+  .mars-orb {
+    width: 28vw;
+    height: 28vw;
+    right: -4%;
+    top: 13%;
+  }
+
+  .moon-orb,
+  .moon-departure {
+    width: 19vw;
+    height: 19vw;
+    left: auto;
+    right: 10%;
+  }
+
+  .moon-orb {
+    right: 9%;
+  }
+
+  .object-content {
+    grid-template-rows: 0.88fr 1.12fr;
+  }
+
+  .character-stage {
+    min-height: 34vh;
+  }
+
+  .character-wrap {
+    width: min(77%, 300px);
+  }
+
+  .character-shadow {
+    bottom: 4%;
+  }
+
+  .scene-copy {
+    font-size: 14px;
+  }
+
+  .object-tagline {
+    margin: 16px 0 22px;
+  }
+
+  .modal-panel {
+    max-height: 92svh;
+    border-radius: 20px;
+  }
+
+  .modal-close {
+    top: 10px;
+    right: 10px;
+  }
+
+  .modal-image-wrap {
+    padding: 22px;
+  }
+
+  .modal-copy {
+    padding: 34px 20px 30px;
+  }
+
+  .facts-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .final-title {
+    font-size: clamp(66px, 18vw, 104px);
+  }
+
+  .final-bus {
+    width: 65vw;
+  }
+
+  .scroll-cue {
+    bottom: 16px;
+  }
+}
+
+/* ============================================================
+   REDUCED MOTION
+   Keep the story usable while reducing movement.
+   ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+
+  .stars-layer,
+  .nebula-layer,
+  .particle-field,
+  .dust-layer {
+    opacity: 0.35;
+  }
+}
+
+
+
+/* CHAPTER 03 — FIRST-PERSON LUNAR ARRIVAL */
+/* Let the transparent Three.js canvas show through Chapter 3.
+   Keep the original Eagle artwork visible until the GLB finishes loading. */
+body.story3d-ready #scene-03 .background-layer,
+body.story3d-ready #scene-03 .terrain-glow,
+body.story3d-ready #scene-03 .particle-field {
+  display: none !important;
+}
+#scene-03.scene3d-ready .character-stage {
+  display: none !important;
+}
+#scene-03.scene3d-ready .scene-content {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+#scene-03.scene3d-ready .object-copy {
+  width: min(49%, 610px);
+  max-width: 610px;
+  padding: clamp(18px, 3vh, 38px) 0;
+  text-shadow: 0 2px 18px rgba(0, 0, 0, .75);
+}
+#scene-03.scene3d-ready .scene-title {
+  font-size: clamp(34px, 4.7vw, 62px);
+}
+.eagle-caption {
+  max-width: 570px;
+  margin: clamp(14px, 2.2vh, 24px) 0 20px;
+}
+.eagle-caption p {
+  margin: 0 0 10px;
+  color: rgba(245, 244, 238, .94);
+  font-size: clamp(13px, 1.18vw, 16px);
+  line-height: 1.52;
+  letter-spacing: .005em;
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity 650ms ease, transform 650ms ease;
+}
+.eagle-caption p.is-revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+.eagle-caption p:nth-last-child(2) {
+  color: #e9d4a8;
+  font-weight: 600;
+}
+.eagle-caption p:last-child {
+  color: #f1dfb9;
+  font-weight: 600;
+}
+#scene-03.scene3d-ready .object-tagline { margin-bottom: 0; }
+#scene-03.scene3d-ready .read-about-button { margin-top: 2px; }
+
+@media (max-width: 900px) {
+  #scene-03.scene3d-ready .scene-content {
+    display: block;
+    width: calc(100% - 34px);
+    padding-top: clamp(82px, 12vh, 116px);
+  }
+  #scene-03.scene3d-ready .object-copy {
+    width: min(68%, 500px);
+    max-width: 500px;
+    padding: 0;
+  }
+  #scene-03.scene3d-ready .scene-title {
+    font-size: clamp(28px, 5.6vw, 44px);
+  }
+  .eagle-caption { margin: 12px 0 14px; }
+  .eagle-caption p {
+    font-size: clamp(12px, 1.75vw, 15px);
+    line-height: 1.42;
+    margin-bottom: 7px;
+  }
+}
+@media (max-width: 620px) {
+  #scene-03.scene3d-ready .scene-content {
+    width: calc(100% - 28px);
+    padding-top: 76px;
+  }
+  #scene-03.scene3d-ready .object-copy { width: min(72%, 390px); }
+  #scene-03.scene3d-ready .scene-title {
+    font-size: clamp(24px, 6.1vw, 34px);
+  }
+  #scene-03.scene3d-ready .eyebrow { font-size: 8px; }
+  .eagle-caption p {
+    font-size: clamp(11px, 2.8vw, 13px);
+    line-height: 1.36;
+    margin-bottom: 6px;
+  }
+  #scene-03.scene3d-ready .read-about-button {
+    padding: 11px 14px;
+    font-size: 9px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .eagle-caption p { transition: none; transform: none; }
+}
+
+/* THREE.JS CHAPTER 01 LAYER */
+.scene3d-root{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;opacity:0;transition:opacity 900ms ease}
+.scene3d-root.is-active{opacity:1}
+body.story3d-ready #scene-01 .background-layer,
+body.story3d-ready #scene-01 .stars-layer,
+body.story3d-ready #scene-01 .dust-layer,
+body.story3d-ready #scene-02 .background-layer,
+body.story3d-ready #scene-02 .nebula-layer,
+body.story3d-ready #scene-02 .stars-layer,
+body.story3d-ready #scene-02 .celestial-object{display:none!important}
+.scene3d-root canvas{display:block;width:100%;height:100%}
+.scene-landing.scene-landing.scene3d-ready .landing-bus{visibility:hidden!important}
+.scene-space.scene3d-ready [data-travel-bus]{visibility:hidden!important}
+body.story3d-failed #scene3d-root{display:none}
+.lunar-data-credit{position:absolute;right:clamp(16px,3vw,40px);bottom:15px;z-index:6;max-width:70%;font-size:8px;line-height:1.5;letter-spacing:.12em;text-align:right;color:rgba(230,232,238,.48);pointer-events:none}
+@media(max-width:620px){.lunar-data-credit{right:14px;bottom:10px;font-size:7px;max-width:82%}}
+@media(prefers-reduced-motion:reduce){.scene3d-root{transition:none}}
+
+
+/* ============================================================
+   CHAPTER 04 — THREE.JS EAGLE-TO-LRV HANDOFF
+   The shared lunar environment remains continuous across Chapters 3–4.
+   ============================================================ */
+#scene-04 {
+  min-height: 125svh;
+  height: 125svh;
+}
+#scene-04 .scene-content {
+  height: 100svh;
+}
+#scene-04.scene3d-ready .background-layer,
+#scene-04.scene3d-ready .terrain-glow,
+#scene-04.scene3d-ready .particle-field {
+  display: none !important;
+}
+#scene-04.scene3d-ready .character-stage {
+  display: none !important;
+}
+#scene-04.scene3d-ready .scene-content {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+#scene-04.scene3d-ready .object-copy {
+  width: min(48%, 590px);
+  max-width: 590px;
+  padding: clamp(18px, 3vh, 38px) 0;
+  text-shadow: 0 2px 18px rgba(0,0,0,.78);
+}
+#scene-04.scene3d-ready .scene-title {
+  font-size: clamp(34px, 4.7vw, 62px);
+}
+#scene-04.scene3d-ready .object-tagline {
+  margin-bottom: 28px;
+}
+@media (max-width: 900px) {
+  #scene-04 .scene-content { height: 100svh; }
+  #scene-04.scene3d-ready .scene-content {
+    display: block;
+    width: calc(100% - 34px);
+    padding-top: clamp(82px, 12vh, 116px);
+  }
+  #scene-04.scene3d-ready .object-copy {
+    width: min(64%, 470px);
+    max-width: 470px;
+    margin-left: auto;
+    padding: 0;
+  }
+  #scene-04.scene3d-ready .scene-title {
+    font-size: clamp(28px, 5.6vw, 44px);
+  }
+}
+@media (max-width: 620px) {
+  #scene-04.scene3d-ready .scene-content {
+    width: calc(100% - 28px);
+    padding-top: 76px;
+  }
+  #scene-04.scene3d-ready .object-copy { width: min(65%, 300px); }
+  #scene-04.scene3d-ready .scene-title {
+    font-size: clamp(23px, 6vw, 32px);
+  }
+  #scene-04.scene3d-ready .eyebrow { font-size: 8px; }
+  #scene-04.scene3d-ready .read-about-button {
+    padding: 11px 14px;
+    font-size: 9px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  #scene-04 { scroll-behavior: auto; }
+}
+
+
+/* CHAPTER 04 — narration captions, synchronized to lrv-narration.mp3 */
+#scene-04 .lrv-caption {
+  max-width: 570px;
+  margin: clamp(14px, 2.2vh, 24px) 0 20px;
+}
+#scene-04 .lrv-caption p {
+  margin: 0 0 10px;
+  color: rgba(245,244,238,.94);
+  font-size: clamp(13px, 1.12vw, 15px);
+  line-height: 1.48;
+  letter-spacing: .005em;
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity 650ms ease, transform 650ms ease;
+}
+#scene-04 .lrv-caption p.is-revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+#scene-04 .lrv-caption p:last-child {
+  color: #f1dfb9;
+  font-weight: 600;
+}
+#scene-04.scene3d-ready .lrv-caption { margin-top: 12px; margin-bottom: 16px; }
+@media (max-width: 900px) {
+  #scene-04 .lrv-caption { margin: 12px 0 14px; }
+  #scene-04 .lrv-caption p {
+    font-size: clamp(11px, 1.55vw, 14px);
+    line-height: 1.38;
+    margin-bottom: 7px;
+  }
+}
+@media (max-width: 620px) {
+  #scene-04 .lrv-caption p {
+    font-size: clamp(10px, 2.45vw, 12px);
+    line-height: 1.32;
+    margin-bottom: 5px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  #scene-04 .lrv-caption p { transition: none; transform: none; }
+}
+
+
+/* ============================================================
+   CHAPTER 05 — THREE.JS ALSEP SCIENCE STATION HANDOFF
+   The lunar environment stays continuous from Chapters 3–5.
+   ============================================================ */
+#scene-05 {
+  min-height: 125svh;
+  height: 125svh;
+}
+#scene-05 .scene-content {
+  height: 100svh;
+}
+#scene-05.scene3d-ready .background-layer,
+#scene-05.scene3d-ready .terrain-glow,
+#scene-05.scene3d-ready .particle-field {
+  display: none !important;
+}
+#scene-05.scene3d-ready .character-stage {
+  display: none !important;
+}
+#scene-05.scene3d-ready .scene-content {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+#scene-05.scene3d-ready .object-copy {
+  width: min(49%, 610px);
+  max-width: 610px;
+  padding: clamp(18px, 3vh, 38px) 0;
+  text-shadow: 0 2px 18px rgba(0,0,0,.78);
+}
+#scene-05.scene3d-ready .scene-title {
+  font-size: clamp(34px, 4.7vw, 62px);
+}
+#scene-05.scene3d-ready .object-tagline { margin-bottom: 0; }
+#scene-05.scene3d-ready .read-about-button { margin-top: 2px; }
+
+#scene-05 .alsep-caption {
+  max-width: 570px;
+  margin: clamp(14px, 2.2vh, 24px) 0 20px;
+}
+#scene-05 .alsep-caption p {
+  margin: 0 0 10px;
+  color: rgba(245,244,238,.94);
+  font-size: clamp(13px, 1.12vw, 15px);
+  line-height: 1.48;
+  letter-spacing: .005em;
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity 650ms ease, transform 650ms ease;
+}
+#scene-05 .alsep-caption p.is-revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+#scene-05 .alsep-caption p:last-child {
+  color: #f1dfb9;
+  font-weight: 600;
+}
+#scene-05.scene3d-ready .alsep-caption {
+  margin-top: 12px;
+  margin-bottom: 16px;
+}
+@media (max-width: 900px) {
+  #scene-05.scene3d-ready .scene-content {
+    display: block;
+    width: calc(100% - 34px);
+    padding-top: clamp(82px, 12vh, 116px);
+  }
+  #scene-05.scene3d-ready .object-copy {
+    width: min(68%, 500px);
+    max-width: 500px;
+    padding: 0;
+  }
+  #scene-05.scene3d-ready .scene-title {
+    font-size: clamp(28px, 5.6vw, 44px);
+  }
+  #scene-05 .alsep-caption { margin: 12px 0 14px; }
+  #scene-05 .alsep-caption p {
+    font-size: clamp(11px, 1.55vw, 14px);
+    line-height: 1.38;
+    margin-bottom: 7px;
+  }
+}
+@media (max-width: 620px) {
+  #scene-05.scene3d-ready .scene-content {
+    width: calc(100% - 28px);
+    padding-top: 76px;
+  }
+  #scene-05.scene3d-ready .object-copy { width: min(68%, 300px); }
+  #scene-05.scene3d-ready .scene-title {
+    font-size: clamp(23px, 6vw, 32px);
+  }
+  #scene-05.scene3d-ready .eyebrow { font-size: 8px; }
+  #scene-05.scene3d-ready .read-about-button {
+    padding: 11px 14px;
+    font-size: 9px;
+  }
+  #scene-05 .alsep-caption p {
+    font-size: clamp(10px, 2.45vw, 12px);
+    line-height: 1.32;
+    margin-bottom: 5px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  #scene-05 .alsep-caption p { transition: none; transform: none; }
+}
+
+
+/* CHAPTER 06 — EXTENDED MARSBOUND FLIGHT
+   Add one quarter-viewport of scroll distance so BUSSY has more time
+   to approach the 3D Mars globe. Keep the foreground copy within the
+   original viewport instead of stretching it with the section. */
+#scene-07 {
+  min-height: 125svh;
+  height: 125svh;
+}
+
+#scene-07 .scene-content {
+  height: 100svh;
+}
+
+/* ============================================================
+   CHAPTER 06 — 3D MARS APPROACH
+   Keep the chapter copy and engine audio; the shared Three.js
+   world supplies the star field, 3D bus and Mars globe.
+   ============================================================ */
+#scene-07.scene3d-ready .background-layer,
+#scene-07.scene3d-ready .nebula-layer,
+#scene-07.scene3d-ready .stars-layer,
+#scene-07.scene3d-ready .celestial-object,
+#scene-07.scene3d-ready .travel-bus {
+  display: none !important;
+}
+#scene-07.scene3d-ready .scene-content {
+  position: relative;
+  z-index: 2;
+}
+
+
+/* CHAPTER 07 — 3D OPPORTUNITY ON THE MARTIAN SURFACE */
+#scene-08 { min-height:125svh; height:125svh; }
+#scene-08 .scene-content { height:100svh; }
+#scene-08.scene3d-ready .background-layer,#scene-08.scene3d-ready .mars-horizon,#scene-08.scene3d-ready .particle-field { display:none!important; }
+#scene-08.scene3d-ready .character-stage { display:none!important; }
+#scene-08.scene3d-ready .scene-content { display:flex;align-items:center;justify-content:flex-end; }
+#scene-08.scene3d-ready .object-copy { width:min(48%,590px);max-width:590px;padding:clamp(18px,3vh,38px) 0;text-shadow:0 2px 18px rgba(0,0,0,.78); }
+#scene-08.scene3d-ready .scene-title { font-size:clamp(34px,4.7vw,62px); }
+#scene-08.scene3d-ready .object-tagline { margin-bottom:0; }
+#scene-08.scene3d-ready .read-about-button { margin-top:2px; }
+.opportunity-caption { max-width:570px; }
+@media(max-width:900px){#scene-08 .scene-content{height:100svh}#scene-08.scene3d-ready .scene-content{display:block;width:calc(100% - 34px);padding-top:clamp(82px,12vh,116px)}#scene-08.scene3d-ready .object-copy{width:min(64%,470px);max-width:470px;margin-left:auto;padding:0}#scene-08.scene3d-ready .scene-title{font-size:clamp(28px,5.6vw,44px)}}
+@media(max-width:620px){#scene-08.scene3d-ready .scene-content{width:calc(100% - 28px);padding-top:76px}#scene-08.scene3d-ready .object-copy{width:min(72%,390px)}#scene-08.scene3d-ready .scene-title{font-size:clamp(24px,6.1vw,34px)}#scene-08.scene3d-ready .eyebrow{font-size:8px}#scene-08.scene3d-ready .read-about-button{padding:11px 14px;font-size:9px}}
+@media(prefers-reduced-motion:reduce){.opportunity-caption p{transition:none;transform:none}}
+
+
+/* CHAPTER 08 — SPIRIT JOINS OPPORTUNITY ON THE SHARED MARTIAN SURFACE */
+#scene-09 { min-height:125svh; height:125svh; }
+#scene-09 .scene-content { height:100svh; }
+#scene-09.scene3d-ready .background-layer,
+#scene-09.scene3d-ready .mars-horizon,
+#scene-09.scene3d-ready .particle-field { display:none!important; }
+#scene-09.scene3d-ready .character-stage { display:none!important; }
+#scene-09.scene3d-ready .scene-content {
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+}
+#scene-09.scene3d-ready .object-copy {
+  width:min(48%,590px);
+  max-width:590px;
+  padding:clamp(18px,3vh,38px) 0;
+  text-shadow:0 2px 18px rgba(0,0,0,.78);
+}
+#scene-09.scene3d-ready .scene-title { font-size:clamp(34px,4.7vw,62px); }
+#scene-09.scene3d-ready .object-tagline { margin-bottom:0; }
+#scene-09.scene3d-ready .read-about-button { margin-top:2px; }
+#scene-09 .spirit-caption { max-width:570px; }
+#scene-09 .spirit-caption p {
+  margin:0 0 10px;
+  color:rgba(245,244,238,.94);
+  font-size:clamp(13px,1.12vw,15px);
+  line-height:1.48;
+  letter-spacing:.005em;
+  opacity:0;
+  transform:translateY(12px);
+  transition:opacity 650ms ease,transform 650ms ease;
+}
+#scene-09 .spirit-caption p.is-revealed { opacity:1; transform:translateY(0); }
+#scene-09 .spirit-caption p:last-child { color:#f1dfb9; font-weight:600; }
+@media(max-width:900px) {
+  #scene-09 .scene-content { height:100svh; }
+  #scene-09.scene3d-ready .scene-content {
+    display:block;
+    width:calc(100% - 34px);
+    padding-top:clamp(82px,12vh,116px);
+  }
+  #scene-09.scene3d-ready .object-copy {
+    width:min(64%,470px);
+    max-width:470px;
+    margin-left:auto;
+    padding:0;
+  }
+  #scene-09.scene3d-ready .scene-title { font-size:clamp(28px,5.6vw,44px); }
+  #scene-09 .spirit-caption { margin:12px 0 14px; }
+  #scene-09 .spirit-caption p {
+    font-size:clamp(11px,1.55vw,14px);
+    line-height:1.38;
+    margin-bottom:7px;
+  }
+}
+@media(max-width:620px) {
+  #scene-09.scene3d-ready .scene-content { width:calc(100% - 28px); padding-top:76px; }
+  #scene-09.scene3d-ready .object-copy { width:min(72%,390px); }
+  #scene-09.scene3d-ready .scene-title { font-size:clamp(24px,6.1vw,34px); }
+  #scene-09.scene3d-ready .eyebrow { font-size:8px; }
+  #scene-09.scene3d-ready .read-about-button { padding:11px 14px; font-size:9px; }
+  #scene-09 .spirit-caption p {
+    font-size:clamp(10px,2.45vw,12px);
+    line-height:1.32;
+    margin-bottom:5px;
+  }
+}
+@media(prefers-reduced-motion:reduce) {
+  #scene-09 .spirit-caption p { transition:none; transform:none; }
+}
+
+
+/* CHAPTER 09 — INSIGHT JOINS OPPORTUNITY AND SPIRIT ON MARS */
+#scene-10 { min-height:125svh; height:125svh; }
+#scene-10 .scene-content { height:100svh; }
+#scene-10.scene3d-ready .background-layer,
+#scene-10.scene3d-ready .mars-horizon,
+#scene-10.scene3d-ready .particle-field { display:none!important; }
+#scene-10.scene3d-ready .character-stage { display:none!important; }
+#scene-10.scene3d-ready .scene-content {
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+}
+#scene-10.scene3d-ready .object-copy {
+  width:min(48%,590px);
+  max-width:590px;
+  padding:clamp(18px,3vh,38px) 0;
+  text-shadow:0 2px 18px rgba(0,0,0,.78);
+}
+#scene-10.scene3d-ready .scene-title { font-size:clamp(34px,4.7vw,62px); }
+#scene-10.scene3d-ready .object-tagline { margin-bottom:0; }
+#scene-10.scene3d-ready .read-about-button { margin-top:2px; }
+#scene-10 .insight-caption { max-width:570px; margin:clamp(14px,2.2vh,24px) 0 20px; }
+#scene-10 .insight-caption p {
+  margin:0 0 10px;
+  color:rgba(245,244,238,.94);
+  font-size:clamp(13px,1.12vw,15px);
+  line-height:1.48;
+  letter-spacing:.005em;
+  opacity:0;
+  transform:translateY(12px);
+  transition:opacity 650ms ease,transform 650ms ease;
+}
+#scene-10 .insight-caption p.is-revealed { opacity:1; transform:translateY(0); }
+#scene-10 .insight-caption p:last-child { color:#f1dfb9; font-weight:600; }
+@media(max-width:900px) {
+  #scene-10 .scene-content { height:100svh; }
+  #scene-10.scene3d-ready .scene-content { display:block; width:calc(100% - 34px); padding-top:clamp(82px,12vh,116px); }
+  #scene-10.scene3d-ready .object-copy { width:min(64%,470px); max-width:470px; margin-left:auto; padding:0; }
+  #scene-10.scene3d-ready .scene-title { font-size:clamp(28px,5.6vw,44px); }
+  #scene-10 .insight-caption { margin:12px 0 14px; }
+  #scene-10 .insight-caption p { font-size:clamp(11px,1.55vw,14px); line-height:1.38; margin-bottom:7px; }
+}
+@media(max-width:620px) {
+  #scene-10.scene3d-ready .scene-content { width:calc(100% - 28px); padding-top:76px; }
+  #scene-10.scene3d-ready .object-copy { width:min(72%,390px); }
+  #scene-10.scene3d-ready .scene-title { font-size:clamp(24px,6.1vw,34px); }
+  #scene-10.scene3d-ready .eyebrow { font-size:8px; }
+  #scene-10.scene3d-ready .read-about-button { padding:11px 14px; font-size:9px; }
+  #scene-10 .insight-caption p { font-size:clamp(10px,2.45vw,12px); line-height:1.32; margin-bottom:5px; }
+}
+@media(prefers-reduced-motion:reduce) {
+  #scene-10 .insight-caption p { transition:none; transform:none; }
+}
+
+
+/* CHAPTER 10 — EXTENDED SCROLL WINDOW
+   Give the scrubbed return-to-Earth sequence three viewport-heights
+   of scroll distance. Keep the text layout at one viewport so the
+   longer section does not stretch or reposition its foreground copy.
+*/
+#scene-12 {
+  min-height: 300svh;
+  height: 300svh;
+}
+#scene-12 .scene-content {
+  height: 100svh;
+}
+
+/* CHAPTER 10 — THREE.JS RETURN JOURNEY */
+#scene-12.scene3d-ready .background-layer,
+#scene-12.scene3d-ready .nebula-layer,
+#scene-12.scene3d-ready .stars-layer,
+#scene-12.scene3d-ready .home-earth-orb { display:none!important; }
+#scene-12.scene3d-ready [data-travel-bus] { visibility:hidden!important; }
+#scene-12.scene3d-ready .scene-content { text-shadow:0 2px 18px rgba(0,0,0,.72); }
+@media(prefers-reduced-motion:reduce) {
+  #scene-12.scene3d-ready .scene-content { text-shadow:0 2px 12px rgba(0,0,0,.72); }
+}
+
+
+/* CHAPTER 11 — EARTH DAYTIME HOMEcoming */
+#scene-13 {
+  min-height: 100svh;
+  height: 100svh;
+  overflow: hidden;
+  background: #83c9f4;
+}
+/* The Three.js canvas is fixed behind the story. Never let the chapter's
+   fallback colour paint over it once the 3D experience is ready. */
+#scene-13.scene3d-ready {
+  background: transparent !important;
+}
+#scene-13.scene3d-ready .background-layer,
+#scene-13.scene3d-ready .stars-layer,
+#scene-13.scene3d-ready .dust-layer,
+#scene-13.scene3d-ready .final-bus {
+  display: none !important;
+}
+#scene-13.scene3d-ready .chapter-eleven-content {
+  position: relative;
+  z-index: 3;
+  width: min(760px, calc(100% - 48px));
+  margin: 0 auto;
+  padding-top: clamp(48px, 6vh, 72px);
+  align-items: center;
+  justify-content: flex-start;
+  text-align: center;
+  pointer-events: none;
+  text-shadow: 0 2px 20px rgba(20, 54, 34, .45);
+}
+#scene-13.scene3d-ready .eyebrow {
+  color: #fff4d7;
+}
+#scene-13.scene3d-ready .final-title {
+  margin: 10px 0 20px;
+  font-size: clamp(36px, 5vw, 66px);
+  line-height: .98;
+}
+#scene-13.scene3d-ready .final-title span {
+  color: #fff0c4;
+}
+.final-narration {
+  width: min(720px, 100%);
+  margin: 0 auto;
+}
+.final-narration p {
+  margin: 0 auto 12px;
+  max-width: 690px;
+  color: #fff;
+  font-size: clamp(15px, 1.45vw, 19px);
+  line-height: 1.5;
+  font-weight: 500;
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity 700ms ease, transform 700ms ease;
+}
+.final-narration p.is-revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+.final-narration p:last-child {
+  color: #fff0c4;
+  font-weight: 700;
+}
+@media(max-width:620px) {
+  #scene-13.scene3d-ready .chapter-eleven-content {
+    width: calc(100% - 32px);
+    padding-top: 54px;
+  }
+  #scene-13.scene3d-ready .final-title {
+    font-size: clamp(34px, 10vw, 48px);
+    margin-bottom: 16px;
+  }
+  .final-narration p {
+    font-size: clamp(12px, 3.3vw, 15px);
+    line-height: 1.4;
+    margin-bottom: 8px;
+  }
+}
+@media(prefers-reduced-motion:reduce) {
+  .final-narration p { transition: none; transform: none; }
+}
+
+/* CHAPTER 03 + 07 — KEEP NARRATION UI INSIDE ITS OWN CHAPTER
+   The audio/caption activation is tied to the chapter's top boundary
+   in script.js. Keep the captions and information buttons hidden until
+   that boundary is reached, including while the previous chapter is visible. */
+#scene-03:not(.chapter-activated) .eagle-caption,
+#scene-08:not(.chapter-activated) .opportunity-caption {
+  visibility: hidden;
+  opacity: 0;
+}
+
+#scene-03.chapter-activated .eagle-caption,
+#scene-08.chapter-activated .opportunity-caption {
+  visibility: visible;
+  opacity: 1;
+}
+
+#scene-03 .read-about-button,
+#scene-08 .read-about-button {
+  transition: opacity 250ms ease, visibility 0s linear 250ms;
+}
+
+#scene-03:not(.chapter-activated) .read-about-button,
+#scene-08:not(.chapter-activated) .read-about-button {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+#scene-03.chapter-activated .read-about-button,
+#scene-08.chapter-activated .read-about-button {
+  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
+  transition: opacity 250ms ease, visibility 0s;
+}
+
+
+/* ============================================================
+   MOBILE ORIENTATION REFINEMENTS
+   These rules apply only to phone-sized viewports. Desktop styles
+   and the existing chapter content remain unchanged.
+   ============================================================ */
+@media (max-width: 620px) and (orientation: portrait) {
+  #scene-04 {
+    height: auto;
+    min-height: 125svh;
+  }
+  #scene-04 .scene-content {
+    height: auto;
+    min-height: 100svh;
+    box-sizing: border-box;
+    padding-bottom: 28px;
+  }
+  #scene-04.scene3d-ready .scene-content {
+    width: calc(100% - 28px);
+    padding-top: 76px;
+    padding-bottom: 28px;
+  }
+  #scene-04.scene3d-ready .object-copy {
+    width: min(100%, 420px);
+    max-width: 420px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  #scene-04.scene3d-ready .read-about-button {
+    display: inline-flex;
+    width: auto;
+    max-width: 100%;
+    margin-top: 8px;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 1100px) and (max-height: 500px) and (orientation: landscape) {
+  #scene-04 {
+    height: auto;
+    min-height: 125svh;
+  }
+  #scene-04 .scene-content {
+    height: auto;
+    min-height: 100svh;
+    box-sizing: border-box;
+  }
+  #scene-04.scene3d-ready .scene-content {
+    display: flex;
+    align-items: flex-start;
+    width: calc(100% - 32px);
+    padding-top: 62px;
+    padding-bottom: 24px;
+  }
+  #scene-04.scene3d-ready .object-copy {
+    width: min(70%, 600px);
+    max-width: 600px;
+    margin-left: auto;
+    padding: 0;
+  }
+  #scene-04.scene3d-ready .scene-title {
+    font-size: clamp(22px, 4.2vw, 34px);
+    margin-bottom: 8px;
+  }
+  #scene-04.scene3d-ready .object-tagline {
+    margin-bottom: 8px;
+  }
+  #scene-04.scene3d-ready .lrv-caption {
+    margin: 8px 0 10px;
+  }
+  #scene-04 .lrv-caption p {
+    font-size: clamp(10px, 1.55vw, 12px);
+    line-height: 1.25;
+    margin-bottom: 4px;
+  }
+  #scene-04.scene3d-ready .read-about-button {
+    display: inline-flex;
+    width: auto;
+    min-height: 36px;
+    margin-top: 6px;
+    padding: 8px 12px;
+    white-space: nowrap;
+  }
+}
+
+
+/* ============================================================
+   LANDSCAPE PHONE LAYOUT — ALL OBJECT CHAPTERS
+   Apply the compact, scroll-safe layout to every 3D object chapter.
+   The existing LRV landscape treatment above remains unchanged.
+   Desktop and portrait layouts are not affected.
+   ============================================================ */
+@media (max-width: 1100px) and (max-height: 500px) and (orientation: landscape) {
+  #scene-03,
+  #scene-05,
+  #scene-08,
+  #scene-09,
+  #scene-10 {
+    height: auto;
+    min-height: 125svh;
+  }
+
+  #scene-03 .scene-content,
+  #scene-05 .scene-content,
+  #scene-08 .scene-content,
+  #scene-09 .scene-content,
+  #scene-10 .scene-content {
+    height: auto;
+    min-height: 100svh;
+    box-sizing: border-box;
+  }
+
+  #scene-03.scene3d-ready .scene-content,
+  #scene-05.scene3d-ready .scene-content,
+  #scene-08.scene3d-ready .scene-content,
+  #scene-09.scene3d-ready .scene-content,
+  #scene-10.scene3d-ready .scene-content {
+    display: block;
+    width: calc(100% - 32px);
+    padding-top: 54px;
+    padding-bottom: 24px;
+  }
+
+  #scene-03.scene3d-ready .object-copy,
+  #scene-05.scene3d-ready .object-copy,
+  #scene-08.scene3d-ready .object-copy,
+  #scene-09.scene3d-ready .object-copy,
+  #scene-10.scene3d-ready .object-copy {
+    width: min(78%, 700px);
+    max-width: 700px;
+    padding: 0;
+  }
+
+  #scene-08.scene3d-ready .object-copy,
+  #scene-09.scene3d-ready .object-copy,
+  #scene-10.scene3d-ready .object-copy {
+    margin-left: auto;
+  }
+
+  #scene-03.scene3d-ready .scene-title,
+  #scene-05.scene3d-ready .scene-title,
+  #scene-08.scene3d-ready .scene-title,
+  #scene-09.scene3d-ready .scene-title,
+  #scene-10.scene3d-ready .scene-title {
+    font-size: clamp(22px, 3.4vw, 34px);
+    line-height: 0.98;
+    margin-bottom: 7px;
+  }
+
+  #scene-03.scene3d-ready .object-tagline,
+  #scene-05.scene3d-ready .object-tagline,
+  #scene-08.scene3d-ready .object-tagline,
+  #scene-09.scene3d-ready .object-tagline,
+  #scene-10.scene3d-ready .object-tagline {
+    margin-top: 6px;
+    margin-bottom: 6px;
+    font-size: clamp(11px, 1.3vw, 14px);
+    line-height: 1.3;
+  }
+
+  #scene-03 .eagle-caption,
+  #scene-05 .alsep-caption,
+  #scene-08 .opportunity-caption,
+  #scene-09 .spirit-caption,
+  #scene-10 .insight-caption {
+    margin: 8px 0 10px;
+  }
+
+  #scene-03 .eagle-caption p,
+  #scene-05 .alsep-caption p,
+  #scene-08 .opportunity-caption p,
+  #scene-09 .spirit-caption p,
+  #scene-10 .insight-caption p {
+    font-size: clamp(10px, 1.3vw, 12px);
+    line-height: 1.28;
+    margin-bottom: 4px;
+  }
+
+  #scene-03.scene3d-ready .read-about-button,
+  #scene-05.scene3d-ready .read-about-button,
+  #scene-08.scene3d-ready .read-about-button,
+  #scene-09.scene3d-ready .read-about-button,
+  #scene-10.scene3d-ready .read-about-button {
+    display: inline-flex;
+    width: auto;
+    min-height: 36px;
+    max-width: 100%;
+    margin-top: 6px;
+    padding: 8px 12px;
+    font-size: 10px;
+    white-space: nowrap;
+  }
+}
+
+
+/* ALSEP PORTAL — SELF-HOSTED 5.5-SECOND MISSION VIDEO */
+.modal-image-wrap.has-alsep-video {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 20px;
+  min-height: 0;
+}
+.modal-image-wrap.has-alsep-video .modal-image {
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  max-height: 430px;
+  object-fit: contain;
+  flex: 0 0 auto;
+}
+.modal-image-wrap.has-alsep-video .modal-image-caption {
+  position: static;
+  align-self: flex-start;
+  margin-top: -8px;
+}
+.modal-video-frame video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #05070b;
+}
+@media (max-width: 900px) {
+  .modal-image-wrap.has-alsep-video {
+    min-height: 0;
+    max-height: none;
+    padding: 22px;
+  }
+  .modal-image-wrap.has-alsep-video .modal-image {
+    min-height: 0;
+    max-height: none;
+  }
+}
+
+/* MOBILE PORTAL VIDEO LAYOUT — keep all six videos in normal document flow */
+@media (max-width: 900px) {
+  .modal-panel {
+    max-height: 92svh;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .modal-grid {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .modal-image-wrap.has-eagle-video,
+  .modal-image-wrap.has-opportunity-video,
+  .modal-image-wrap.has-insight-video,
+  .modal-image-wrap.has-spirit-video,
+  .modal-image-wrap.has-lrv-video,
+  .modal-image-wrap.has-alsep-video,
+  .modal-image-wrap.has-surveyor-video,
+  .modal-image-wrap.has-pathfinder-video {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+    min-height: 0;
+    max-height: none;
+    padding: 22px;
+    overflow: visible;
+  }
+
+  .modal-image-wrap.has-eagle-video .modal-image,
+  .modal-image-wrap.has-opportunity-video .modal-image,
+  .modal-image-wrap.has-insight-video .modal-image,
+  .modal-image-wrap.has-spirit-video .modal-image,
+  .modal-image-wrap.has-lrv-video .modal-image,
+  .modal-image-wrap.has-alsep-video .modal-image,
+  .modal-image-wrap.has-surveyor-video .modal-image,
+  .modal-image-wrap.has-pathfinder-video .modal-image {
+    display: block;
+    width: 100%;
+    height: auto;
+    min-height: 0;
+    max-height: 38svh;
+    object-fit: contain;
+    flex: 0 0 auto;
+  }
+
+  .modal-image-wrap.has-eagle-video .modal-image-caption,
+  .modal-image-wrap.has-opportunity-video .modal-image-caption,
+  .modal-image-wrap.has-insight-video .modal-image-caption,
+  .modal-image-wrap.has-spirit-video .modal-image-caption,
+  .modal-image-wrap.has-lrv-video .modal-image-caption,
+  .modal-image-wrap.has-alsep-video .modal-image-caption,
+  .modal-image-wrap.has-surveyor-video .modal-image-caption,
+  .modal-image-wrap.has-pathfinder-video .modal-image-caption {
+    position: static;
+    align-self: flex-start;
+    margin: 0;
+  }
+
+  .modal-image-wrap.has-eagle-video .modal-video-block,
+  .modal-image-wrap.has-opportunity-video .modal-video-block,
+  .modal-image-wrap.has-insight-video .modal-video-block,
+  .modal-image-wrap.has-spirit-video .modal-video-block,
+  .modal-image-wrap.has-lrv-video .modal-video-block,
+  .modal-image-wrap.has-alsep-video .modal-video-block,
+  .modal-image-wrap.has-surveyor-video .modal-video-block,
+  .modal-image-wrap.has-pathfinder-video .modal-video-block {
+    position: relative;
+    display: block;
+    width: 100%;
+    flex: 0 0 auto;
+    margin: 0;
+  }
+
+  .modal-image-wrap.has-eagle-video .modal-video-block[hidden],
+  .modal-image-wrap.has-opportunity-video .modal-video-block[hidden],
+  .modal-image-wrap.has-insight-video .modal-video-block[hidden],
+  .modal-image-wrap.has-spirit-video .modal-video-block[hidden],
+  .modal-image-wrap.has-lrv-video .modal-video-block[hidden],
+  .modal-image-wrap.has-alsep-video .modal-video-block[hidden],
+  .modal-image-wrap.has-surveyor-video .modal-video-block[hidden],
+  .modal-image-wrap.has-pathfinder-video .modal-video-block[hidden] {
+    display: none;
+  }
+
+  .modal-image-wrap.has-eagle-video .modal-video-frame,
+  .modal-image-wrap.has-opportunity-video .modal-video-frame,
+  .modal-image-wrap.has-insight-video .modal-video-frame,
+  .modal-image-wrap.has-spirit-video .modal-video-frame,
+  .modal-image-wrap.has-lrv-video .modal-video-frame,
+  .modal-image-wrap.has-alsep-video .modal-video-frame,
+  .modal-image-wrap.has-surveyor-video .modal-video-frame,
+  .modal-image-wrap.has-pathfinder-video .modal-video-frame {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+  }
+
+  .modal-copy {
+    min-width: 0;
+  }
+}
+
+
+
+/* ============================================================
+   NEW CHAPTER 06 — SURVEYOR 3
+   Uses the established lunar world and shared narration-caption style.
+   ============================================================ */
+#scene-06 { min-height:125svh; height:125svh; }
+#scene-06 .scene-content { height:100svh; }
+#scene-06.scene3d-ready .background-layer,
+#scene-06.scene3d-ready .terrain-glow,
+#scene-06.scene3d-ready .particle-field { display:none!important; }
+#scene-06.scene3d-ready .character-stage { display:none!important; }
+#scene-06.scene3d-ready .scene-content {
+  display:flex; align-items:center; justify-content:flex-start;
+}
+#scene-06.scene3d-ready .object-copy {
+  width:min(49%,610px); max-width:610px;
+  padding:clamp(18px,3vh,38px) 0;
+  text-shadow:0 2px 18px rgba(0,0,0,.78);
+}
+#scene-06.scene3d-ready .scene-title { font-size:clamp(34px,4.7vw,62px); }
+#scene-06 .surveyor-caption { max-width:570px; }
+#scene-06 .surveyor-caption p {
+  margin:0 0 9px; color:rgba(245,244,238,.94);
+  font-size:clamp(12px,1.08vw,15px); line-height:1.43;
+  opacity:0; transform:translateY(12px);
+  transition:opacity 650ms ease,transform 650ms ease;
+}
+#scene-06 .surveyor-caption p.is-revealed { opacity:1; transform:translateY(0); }
+#scene-06 .surveyor-caption p:last-child { color:#f1dfb9; font-weight:600; }
+#scene-06.scene3d-ready .object-tagline { margin-bottom:0; }
+#scene-06.scene3d-ready .read-about-button { margin-top:2px; }
+
+/* ============================================================
+   NEW CHAPTER 11 — MARS PATHFINDER + SOJOURNER
+   One combined character, one shared narration and one portal.
+   ============================================================ */
+#scene-11 { min-height:125svh; height:125svh; }
+#scene-11 .scene-content { height:100svh; }
+#scene-11.scene3d-ready .background-layer,
+#scene-11.scene3d-ready .mars-horizon,
+#scene-11.scene3d-ready .particle-field { display:none!important; }
+#scene-11.scene3d-ready .character-stage { display:none!important; }
+#scene-11.scene3d-ready .scene-content {
+  display:flex; align-items:center; justify-content:flex-end;
+}
+#scene-11.scene3d-ready .object-copy {
+  width:min(49%,610px); max-width:610px; margin-left:auto;
+  padding:clamp(18px,3vh,38px) 0;
+  text-shadow:0 2px 18px rgba(0,0,0,.78);
+}
+#scene-11.scene3d-ready .scene-title { font-size:clamp(34px,4.7vw,62px); }
+#scene-11 .pathfinder-caption { max-width:570px; }
+#scene-11 .pathfinder-caption p {
+  margin:0 0 9px; color:rgba(245,244,238,.94);
+  font-size:clamp(12px,1.08vw,15px); line-height:1.43;
+  opacity:0; transform:translateY(12px);
+  transition:opacity 650ms ease,transform 650ms ease;
+}
+#scene-11 .pathfinder-caption p.is-revealed { opacity:1; transform:translateY(0); }
+#scene-11 .pathfinder-caption p:last-child { color:#f1dfb9; font-weight:600; }
+#scene-11.scene3d-ready .object-tagline { margin-bottom:0; }
+#scene-11.scene3d-ready .read-about-button { margin-top:2px; }
+
+#scene-06:not(.chapter-activated) .surveyor-caption,
+#scene-11:not(.chapter-activated) .pathfinder-caption,
+#scene-06:not(.chapter-activated) .read-about-button,
+#scene-11:not(.chapter-activated) .read-about-button {
+  visibility:hidden; opacity:0; pointer-events:none;
+}
+#scene-06.chapter-activated .surveyor-caption,
+#scene-11.chapter-activated .pathfinder-caption,
+#scene-06.chapter-activated .read-about-button,
+#scene-11.chapter-activated .read-about-button {
+  visibility:visible; opacity:1; pointer-events:auto;
+}
+
+@media(max-width:900px) {
+  #scene-06 .scene-content, #scene-11 .scene-content { height:100svh; }
+  #scene-06.scene3d-ready .scene-content,
+  #scene-11.scene3d-ready .scene-content {
+    display:block; width:calc(100% - 34px);
+    padding-top:clamp(82px,12vh,116px);
+  }
+  #scene-06.scene3d-ready .object-copy {
+    width:min(66%,490px); max-width:490px; padding:0;
+  }
+  #scene-11.scene3d-ready .object-copy {
+    width:min(66%,490px); max-width:490px; margin-left:auto; padding:0;
+  }
+  #scene-06.scene3d-ready .scene-title,
+  #scene-11.scene3d-ready .scene-title { font-size:clamp(28px,5.6vw,44px); }
+  #scene-06 .surveyor-caption p,
+  #scene-11 .pathfinder-caption p {
+    font-size:clamp(11px,1.55vw,14px); line-height:1.38; margin-bottom:7px;
+  }
+}
+@media(max-width:620px) {
+  #scene-06.scene3d-ready .scene-content,
+  #scene-11.scene3d-ready .scene-content {
+    width:calc(100% - 28px); padding-top:76px;
+  }
+  #scene-06.scene3d-ready .object-copy,
+  #scene-11.scene3d-ready .object-copy { width:min(72%,390px); }
+  #scene-06.scene3d-ready .scene-title,
+  #scene-11.scene3d-ready .scene-title { font-size:clamp(23px,6vw,34px); }
+  #scene-06.scene3d-ready .eyebrow,
+  #scene-11.scene3d-ready .eyebrow { font-size:8px; }
+  #scene-06 .surveyor-caption p,
+  #scene-11 .pathfinder-caption p {
+    font-size:clamp(10px,2.45vw,12px); line-height:1.32; margin-bottom:5px;
+  }
+  #scene-06.scene3d-ready .read-about-button,
+  #scene-11.scene3d-ready .read-about-button { padding:11px 14px; font-size:9px; }
+}
+@media(prefers-reduced-motion:reduce) {
+  #scene-06 .surveyor-caption p,
+  #scene-11 .pathfinder-caption p { transition:none; transform:none; }
+}
+
+
+/* PATHFINDER + SOJOURNER — FULL-LENGTH INTERACTIVE 360° VIDEO */
+.modal-image-wrap.has-surveyor-video,
+  .modal-image-wrap.has-pathfinder-video {
+  min-height: 0;
+}
+.modal-image-wrap.has-surveyor-video .modal-image,
+  .modal-image-wrap.has-pathfinder-video .modal-image {
+  max-height: 430px;
+}
+.modal-video-note {
+  margin: 9px 0 0;
+  color: rgba(235,239,247,.58);
+  font-size: 11px;
+  line-height: 1.45;
+}
+.modal-video-youtube-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 100%;
+  margin-top: 10px;
+  padding: 9px 12px;
+  border: 1px solid rgba(235,239,247,.24);
+  border-radius: 6px;
+  color: #f3f5fa;
+  font-size: 11px;
+  line-height: 1.4;
+  text-decoration: none;
+  text-align: center;
+}
+.modal-video-youtube-link:hover,
+.modal-video-youtube-link:focus-visible {
+  border-color: rgba(235,239,247,.58);
+  background: rgba(235,239,247,.08);
+}
+@media (max-width: 900px) {
+  .modal-image-wrap.has-surveyor-video,
+  .modal-image-wrap.has-pathfinder-video {
+    min-height: 0;
+    max-height: none;
+    padding: 22px;
+    overflow: visible;
+  }
+  .modal-image-wrap.has-surveyor-video .modal-image,
+  .modal-image-wrap.has-pathfinder-video .modal-image {
+    width: 100%;
+    height: auto;
+    min-height: 0;
+    max-height: 38svh;
+    object-fit: contain;
+  }
+  .modal-image-wrap.has-surveyor-video .modal-video-frame,
+  .modal-image-wrap.has-pathfinder-video .modal-video-frame {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    max-width: 100%;
+  }
+  .modal-image-wrap.has-surveyor-video .modal-video-frame iframe,
+  .modal-image-wrap.has-pathfinder-video .modal-video-frame iframe {
+    width: 100%;
+    height: 100%;
+  }
+}
+
+
+/* ============================================================
+   PROJECT FOOTER — GITHUB SOURCE CODE LINK
+   Appears after the final story scene, at the bottom of the page.
+   ============================================================ */
+.site-footer {
+  position: relative;
+  z-index: 5;
+  width: 100%;
+  padding: clamp(34px, 6vh, 58px) 20px clamp(30px, 5vh, 46px);
+  background: linear-gradient(180deg, #080d16 0%, #03050a 100%);
+  border-top: 1px solid rgba(255,255,255,.12);
+  text-align: center;
+}
+.site-footer-inner {
+  width: min(100%, 760px);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 13px;
+}
+.site-footer-eyebrow {
+  color: rgba(220,230,244,.58);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .22em;
+}
+.site-footer-github-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 11px;
+  max-width: 100%;
+  min-height: 46px;
+  padding: 12px 19px;
+  border: 1px solid rgba(220,230,244,.34);
+  border-radius: 999px;
+  color: #f5f7fb;
+  background: rgba(255,255,255,.045);
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: .075em;
+  line-height: 1.3;
+  text-decoration: none;
+  transition: border-color 180ms ease, background 180ms ease, transform 180ms ease;
+}
+.site-footer-github-icon {
+  width: 19px;
+  height: 19px;
+  flex: 0 0 19px;
+}
+.site-footer-external {
+  color: rgba(220,230,244,.68);
+  font-size: 15px;
+  line-height: 1;
+}
+.site-footer-github-link.is-placeholder {
+  opacity: .58;
+  cursor: default;
+}
+.site-footer-github-link:not(.is-placeholder):hover {
+  border-color: rgba(142,233,255,.72);
+  background: rgba(142,233,255,.09);
+  transform: translateY(-2px);
+}
+.site-footer-caption {
+  color: rgba(220,230,244,.42);
+  font-size: 9px;
+  letter-spacing: .12em;
+}
+@media(max-width:620px) {
+  .site-footer {
+    padding: 30px 16px 34px;
+  }
+  .site-footer-github-link {
+    gap: 9px;
+    min-height: 44px;
+    padding: 11px 14px;
+    font-size: 9px;
+    letter-spacing: .055em;
+  }
+}
+@media(prefers-reduced-motion:reduce) {
+  .site-footer-github-link {
+    transition: none;
+  }
+}
