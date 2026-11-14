@@ -398,3 +398,603 @@ export async function createStoryExperience({mount,landingScene,travelScene,mars
  roofShape.moveTo(-9.35,0);
  roofShape.lineTo(0,2.35);
  roofShape.lineTo(9.35,0);
+roofShape.closePath();
+ const roofGeometry=new THREE.ExtrudeGeometry(roofShape,{depth:4.95,bevelEnabled:false,steps:1});
+ roofGeometry.translate(0,0,-2.475);
+ const roofMesh=new THREE.Mesh(roofGeometry,schoolRoof);
+ roofMesh.position.y=5.28;
+ roofMesh.castShadow=true;
+ schoolCampus.add(roofMesh);
+
+ // Front windows, frames and the central entrance.
+ for(const x of [-6.7,-3.7,3.7,6.7]){
+   makeBox(schoolCampus,1.95,1.55,.16,schoolFrame,x,3.55,2.34);
+   makeBox(schoolCampus,1.68,1.28,.08,schoolGlass,x,3.55,2.445);
+   makeBox(schoolCampus,.07,1.3,.1,schoolFrame,x,3.55,2.5);
+   makeBox(schoolCampus,1.7,.07,.1,schoolFrame,x,3.55,2.5);
+ }
+ makeBox(schoolCampus,2.05,2.65,.2,schoolTrim,0,1.32,2.36);
+ makeBox(schoolCampus,1.72,2.38,.12,schoolDoor,0,1.25,2.49);
+ makeBox(schoolCampus,.12,.12,.16,schoolFrame,.62,1.2,2.57);
+ makeBox(schoolCampus,3.25,.28,1.35,schoolTrim,0,.14,3.02);
+ makeBox(schoolCampus,2.55,.22,.9,schoolFrame,0,.36,2.82);
+
+ // A readable sign is painted onto a small 3D board above the entrance.
+ const schoolSignCanvas=document.createElement("canvas");
+ schoolSignCanvas.width=768;schoolSignCanvas.height=128;
+ const schoolSignCtx=schoolSignCanvas.getContext("2d");
+ schoolSignCtx.fillStyle="#244b63";
+ schoolSignCtx.fillRect(0,0,768,128);
+ schoolSignCtx.fillStyle="#fff3d6";
+ schoolSignCtx.font="bold 66px Arial";
+ schoolSignCtx.textAlign="center";
+ schoolSignCtx.textBaseline="middle";
+ schoolSignCtx.fillText("OUR SCHOOL",384,66);
+ const schoolSignTexture=new THREE.CanvasTexture(schoolSignCanvas);
+ schoolSignTexture.colorSpace=THREE.SRGBColorSpace;
+ const schoolSign=new THREE.Mesh(
+   new THREE.PlaneGeometry(5.7,.9),
+   new THREE.MeshBasicMaterial({map:schoolSignTexture})
+ );
+ schoolSign.position.set(0,4.55,2.49);
+ schoolCampus.add(schoolSign);
+
+ // Flagpole and a small bright flag at the front corner.
+ const pole=new THREE.Mesh(new THREE.CylinderGeometry(.045,.06,6.2,10),schoolFrame);
+ pole.position.set(-9.9,3.1,1.1);
+ schoolCampus.add(pole);
+ const flagShape=new THREE.Shape();
+ flagShape.moveTo(0,0);flagShape.lineTo(1.7,-.15);flagShape.lineTo(0,-.85);flagShape.closePath();
+ const flag=new THREE.Mesh(new THREE.ShapeGeometry(flagShape),mat(0xe85b50,.8));
+ flag.position.set(-9.88,5.8,1.15);
+ schoolCampus.add(flag);
+
+ // Trees frame the campus without hiding the building or road.
+ const trunkMaterial=mat(0x805536,1),leafMaterials=[mat(0x4e9149,1),mat(0x68aa55,1),mat(0x82bd62,1)];
+ for(const side of [-1,1]){
+   for(let i=0;i<2;i++){
+     const tree=new THREE.Group();
+     tree.position.set(side*(11.2+i*2.2),0,-27-i*5);
+     const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.2,.3,2.8,9),trunkMaterial);
+     trunk.position.y=1.4;tree.add(trunk);
+     [[0,3.5,0,1.55],[.75,4.05,.1,1.05],[-.7,4.0,-.1,1.05]].forEach(([x,y,z,r],j)=>{
+       const crown=new THREE.Mesh(new THREE.SphereGeometry(r,12,9),leafMaterials[(i+j)%leafMaterials.length]);
+       crown.position.set(x,y,z);crown.scale.y=1.12;tree.add(crown);
+     });
+     schoolCampus.add(tree);
+   }
+ }
+
+ // Park BUSSY on the road, facing the viewer, and stop its in-flight bob.
+
+
+
+ // CHAPTER 3 — FIRST-PERSON LUNAR SURFACE
+ const surfaceGroup=new THREE.Group();
+ surfaceGroup.scale.setScalar(.001);
+ scene.add(surfaceGroup);
+
+ // Procedural regolith texture.
+ const regolithCanvas=document.createElement("canvas");
+ regolithCanvas.width=512;regolithCanvas.height=512;
+ const regolithCtx=regolithCanvas.getContext("2d");
+ regolithCtx.fillStyle="#77746d";regolithCtx.fillRect(0,0,512,512);
+ for(let i=0;i<9500;i++){
+   const x=Math.random()*512,y=Math.random()*512,r=.35+Math.random()*2.1;
+   const shade=70+Math.floor(Math.random()*100);
+   regolithCtx.fillStyle="rgba("+shade+","+shade+","+Math.max(65,shade-5)+","+(Math.random()*.22)+")";
+   regolithCtx.beginPath();regolithCtx.arc(x,y,r,0,Math.PI*2);regolithCtx.fill();
+ }
+ for(let i=0;i<95;i++){
+   const x=Math.random()*512,y=Math.random()*512,r=2+Math.random()*13;
+   regolithCtx.strokeStyle="rgba(35,35,34,.24)";regolithCtx.lineWidth=1+Math.random()*2;
+   regolithCtx.beginPath();regolithCtx.arc(x,y,r,0,Math.PI*2);regolithCtx.stroke();
+ }
+ const regolithTexture=new THREE.CanvasTexture(regolithCanvas);
+ regolithTexture.colorSpace=THREE.SRGBColorSpace;
+ regolithTexture.wrapS=THREE.RepeatWrapping;regolithTexture.wrapT=THREE.RepeatWrapping;
+ regolithTexture.repeat.set(18,18);
+ regolithTexture.anisotropy=Math.min(renderer.capabilities.getMaxAnisotropy(),4);
+
+ const groundGeometry=new THREE.PlaneGeometry(180,180,90,90);
+ const groundPositions=groundGeometry.attributes.position;
+ for(let i=0;i<groundPositions.count;i++){
+   const x=groundPositions.getX(i),z=groundPositions.getY(i);
+   groundPositions.setZ(i,Math.sin(x*.17)*.055+Math.cos(z*.13)*.045+Math.sin((x+z)*.075)*.035);
+ }
+ groundGeometry.computeVertexNormals();groundGeometry.rotateX(-Math.PI/2);
+ const groundMaterial=new THREE.MeshStandardMaterial({map:regolithTexture,color:0xb0aaa0,roughness:1,metalness:0});
+ const ground=new THREE.Mesh(groundGeometry,groundMaterial);
+ ground.position.set(0,-2.15,-34);ground.receiveShadow=true;surfaceGroup.add(ground);
+
+ // Distant crater rims and low lunar ridges.
+ const ridgeMaterial=new THREE.MeshStandardMaterial({color:0x45464a,roughness:1});
+ const ridgeLightMaterial=new THREE.MeshStandardMaterial({color:0x66635d,roughness:1});
+ const hillGeometry=new THREE.SphereGeometry(1,28,18);
+ [
+   [-23,-1.35,-49,18,2.1,8],[-3,-1.45,-54,20,2.6,9],
+   [20,-1.4,-51,17,2.0,8],[39,-1.5,-60,22,2.8,10]
+ ].forEach((v,i)=>{
+   const hill=new THREE.Mesh(hillGeometry,i%2?ridgeMaterial:ridgeLightMaterial);
+   hill.position.set(v[0],v[1],v[2]);hill.scale.set(v[3],v[4],v[5]);
+   hill.receiveShadow=true;surfaceGroup.add(hill);
+ });
+
+ const craterRimMaterial=new THREE.MeshStandardMaterial({color:0x96918a,roughness:1});
+ const craterFloorMaterial=new THREE.MeshStandardMaterial({color:0x56534e,roughness:1});
+ [[-5,-13,1.8],[7,-22,2.4],[-13,-29,2.1]].forEach((v)=>{
+   const floor=new THREE.Mesh(new THREE.CircleGeometry(v[2]*.9,40),craterFloorMaterial);
+   floor.rotation.x=-Math.PI/2;floor.position.set(v[0],-2.105,v[1]);surfaceGroup.add(floor);
+   const rim=new THREE.Mesh(new THREE.TorusGeometry(v[2],.085,8,48),craterRimMaterial);
+   rim.rotation.x=Math.PI/2;rim.position.set(v[0],-2.08,v[1]);surfaceGroup.add(rim);
+ });
+
+ // Angular lunar rocks in the foreground and middle distance.
+ const rockMaterials=[
+   new THREE.MeshStandardMaterial({color:0x77736c,roughness:1}),
+   new THREE.MeshStandardMaterial({color:0x5d5b57,roughness:1}),
+   new THREE.MeshStandardMaterial({color:0x99938a,roughness:1})
+ ];
+ for(let i=0;i<(mobile?34:58);i++){
+   const size=.12+Math.random()*.48;
+   const rock=new THREE.Mesh(new THREE.DodecahedronGeometry(size,0),rockMaterials[i%rockMaterials.length]);
+   const z=3-Math.random()*31,x=(Math.random()-.5)*(z>-8?23:34);
+   rock.position.set(x,-2.02+Math.random()*.08,z);
+   rock.rotation.set(Math.random()*1.2,Math.random()*Math.PI,Math.random()*1.2);
+   rock.scale.set(.8+Math.random()*.8,.55+Math.random()*.75,.75+Math.random()*.8);
+   rock.castShadow=true;rock.receiveShadow=true;surfaceGroup.add(rock);
+ }
+
+ // Load the user's Tripo-generated Apollo 11 Eagle GLB.
+ // The GLB already contains its own face and materials, so no duplicate
+ // procedural eyes or mouth are added here.
+ const eagleRoot=new THREE.Group();
+ eagleRoot.position.set(mobile?.55:1.15,-2.13,-4.8);
+ eagleRoot.rotation.y=mobile?-.05:-.1;
+ surfaceGroup.add(eagleRoot);
+ let eagleLoaded=false;
+ const eagleLoader=new GLTFLoader();
+ eagleLoader.setMeshoptDecoder(MeshoptDecoder);
+ const eagleOptimizedUrl="./assets/models/apollo-11-eagle-descent-stage.meshopt-test.glb";
+ const eagleOriginalUrl="./assets/models/apollo-11-eagle-descent-stage.glb";
+ const onEagleLoaded=(gltf)=>{
+   if(disposed){
+     gltf.scene.traverse(o=>{
+       o.geometry?.dispose();
+       if(o.material)(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>{
+         Object.values(m).forEach(v=>{if(v?.isTexture)v.dispose();});
+         m.dispose();
+       });
+     });
+     return;
+   }
+   const model=gltf.scene;
+   const bounds=new THREE.Box3().setFromObject(model);
+   const center=bounds.getCenter(new THREE.Vector3());
+   const dimensions=bounds.getSize(new THREE.Vector3());
+   // Center the model over its landing point and place its lowest point
+   // on the lunar ground plane. The inspected GLB is Y-up.
+   model.position.x-=center.x;
+   model.position.z-=center.z;
+   model.position.y-=bounds.min.y;
+   const targetHeight=3.35;
+   const scale=targetHeight/Math.max(dimensions.y,.001);
+   eagleRoot.scale.setScalar(scale);
+   model.traverse(object=>{
+     if(!object.isMesh)return;
+     object.castShadow=true;
+     object.receiveShadow=true;
+     if(Array.isArray(object.material)){
+       object.material.forEach(material=>{material.needsUpdate=true;});
+     }else if(object.material){
+       object.material.needsUpdate=true;
+     }
+   });
+   eagleRoot.add(model);
+   eagleLoaded=true;
+   surfaceScene.classList.add("scene3d-ready");
+   surfaceScene.classList.remove("scene3d-failed");
+ };
+ const onEagleProgress=(progress)=>{
+   if(progress.total>0){
+     mount.dataset.eagleLoadProgress=String(Math.round(progress.loaded/progress.total*100));
+   }
+ };
+ eagleLoader.load(
+   eagleOptimizedUrl,
+   onEagleLoaded,
+   onEagleProgress,
+   (optimizedError)=>{
+     console.warn("Meshopt Eagle test model failed; falling back to the original Eagle GLB.",optimizedError);
+     eagleLoader.load(
+       eagleOriginalUrl,
+       onEagleLoaded,
+       onEagleProgress,
+       (originalError)=>{
+         console.error("Both the Meshopt test and original Apollo 11 Eagle GLB failed to load; retaining the original 2D Eagle artwork.",{optimizedError,originalError});
+         surfaceScene.classList.add("scene3d-failed");
+       }
+     );
+   }
+ );
+
+ // CHAPTER 4 — APOLLO LUNAR ROVING VEHICLE
+ // Keep the Eagle and rover in the same lunar world; the rover is loaded
+ // shortly before Chapter 4 enters view to avoid downloading both large GLBs at once.
+ const lrvRoot=new THREE.Group();
+ lrvRoot.position.set(mobile?4.1:5.4,-2.13,-4.8);
+ lrvRoot.rotation.y=mobile?-.18:-.32;
+ lrvRoot.visible=false;
+ surfaceGroup.add(lrvRoot);
+ let lrvLoaded=false;
+ const lrvLoader=new GLTFLoader();
+ lrvLoader.setMeshoptDecoder(MeshoptDecoder);
+ const lrvOptimizedUrl="./assets/models/apollo-lunar-roving-vehicle.meshopt-test.glb";
+ const lrvOriginalUrl="./assets/models/apollo-lunar-roving-vehicle.glb";
+ const loadLrvModel=()=>{
+  if(lrvLoaded||disposed)return;
+  const attachLrvModel=gltf=>{
+   if(disposed){
+    gltf.scene.traverse(o=>{
+     o.geometry?.dispose();
+     if(o.material)(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>{
+      Object.values(m).forEach(v=>{if(v?.isTexture)v.dispose();});
+      m.dispose();
+     });
+    });
+    return;
+   }
+   const model=gltf.scene;
+   const bounds=new THREE.Box3().setFromObject(model);
+   const center=bounds.getCenter(new THREE.Vector3());
+   const dimensions=bounds.getSize(new THREE.Vector3());
+   model.position.x-=center.x;
+   model.position.z-=center.z;
+   model.position.y-=bounds.min.y;
+   const horizontalSpan=Math.max(dimensions.x,dimensions.z);
+   const targetLength=mobile?2.85:4.15;
+   lrvRoot.scale.setScalar(targetLength/Math.max(horizontalSpan,.001));
+   model.traverse(object=>{
+    if(!object.isMesh)return;
+    object.castShadow=true;
+    object.receiveShadow=true;
+    if(Array.isArray(object.material))object.material.forEach(material=>{material.needsUpdate=true;});
+    else if(object.material)object.material.needsUpdate=true;
+   });
+   lrvRoot.add(model);
+   lrvRoot.visible=true;
+   lrvLoaded=true;
+   lrvScene.classList.add("scene3d-ready");
+   lrvScene.classList.remove("scene3d-failed");
+   ScrollTrigger.refresh();
+  };
+  const reportProgress=progress=>{
+   if(progress.total>0)mount.dataset.lrvLoadProgress=String(Math.round(progress.loaded/progress.total*100));
+  };
+  lrvLoader.load(lrvOptimizedUrl,attachLrvModel,reportProgress,error=>{
+   console.warn("Optimized Lunar Roving Vehicle failed to load; trying the original GLB.",error);
+   lrvLoader.load(lrvOriginalUrl,attachLrvModel,reportProgress,fallbackError=>{
+    console.error("Both optimized and original Lunar Roving Vehicle GLBs could not be loaded; retaining the original 2D LRV artwork.",fallbackError);
+    lrvScene.classList.add("scene3d-failed");
+   });
+  });
+ };
+ const lrvLoadTrigger=ScrollTrigger.create({
+   trigger:lrvScene,
+   start:"top 125%",
+   once:true,
+   onEnter:loadLrvModel
+ });
+
+ // CHAPTER 5 — ALSEP SCIENCE STATIONS
+ // Load the station package shortly before Chapter 5; keep the same lunar
+ // ground, star field, lighting and camera used by the previous chapters.
+ const alsepRoot=new THREE.Group();
+ alsepRoot.position.set(mobile?4.8:5.6,-2.13,-4.9);
+ alsepRoot.rotation.y=mobile?-.16:-.24;
+ alsepRoot.visible=false;
+ surfaceGroup.add(alsepRoot);
+ let alsepLoaded=false;
+ const alsepLoader=new GLTFLoader();
+ alsepLoader.setMeshoptDecoder(MeshoptDecoder);
+ const alsepOptimizedUrl="./assets/models/alsep-science-station.meshopt-test.glb";
+ const alsepOriginalUrl="./assets/models/alsep-science-station.glb";
+ const loadAlsepModel=()=>{
+   if(alsepLoaded||disposed)return;
+   const attachAlsepModel=(gltf)=>{
+     if(disposed){
+       gltf.scene.traverse(o=>{
+         o.geometry?.dispose();
+         if(o.material)(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>{
+           Object.values(m).forEach(v=>{if(v?.isTexture)v.dispose();});
+           m.dispose();
+         });
+       });
+       return;
+     }
+     const model=gltf.scene;
+     const bounds=new THREE.Box3().setFromObject(model);
+     const center=bounds.getCenter(new THREE.Vector3());
+     const dimensions=bounds.getSize(new THREE.Vector3());
+     model.position.x-=center.x;
+     model.position.z-=center.z;
+     model.position.y-=bounds.min.y;
+     const horizontalSpan=Math.max(dimensions.x,dimensions.z);
+     const targetLength=mobile?3.25:4.55;
+     alsepRoot.scale.setScalar(targetLength/Math.max(horizontalSpan,.001));
+     model.traverse(object=>{
+       if(!object.isMesh)return;
+       object.castShadow=true;
+       object.receiveShadow=true;
+       if(Array.isArray(object.material)){
+         object.material.forEach(material=>{material.needsUpdate=true;});
+       }else if(object.material){
+         object.material.needsUpdate=true;
+       }
+     });
+     alsepRoot.add(model);
+     alsepRoot.visible=true;
+     alsepLoaded=true;
+     alsepScene.classList.add("scene3d-ready");
+     alsepScene.classList.remove("scene3d-failed");
+     ScrollTrigger.refresh();
+   };
+   const reportAlsepProgress=progress=>{
+     if(progress.total>0){
+       mount.dataset.alsepLoadProgress=String(Math.round(progress.loaded/progress.total*100));
+     }
+   };
+   alsepLoader.load(alsepOptimizedUrl,attachAlsepModel,reportAlsepProgress,error=>{
+     console.warn("Optimized ALSEP Science Station failed to load; trying the original GLB.",error);
+     alsepLoader.load(alsepOriginalUrl,attachAlsepModel,reportAlsepProgress,fallbackError=>{
+       console.error("Both optimized and original ALSEP Science Station GLBs could not be loaded; retaining the original 2D ALSEP artwork.",fallbackError);
+       alsepScene.classList.add("scene3d-failed");
+     });
+   });
+ };
+ const alsepLoadTrigger=ScrollTrigger.create({
+   trigger:alsepScene,
+   start:"top 125%",
+   once:true,
+   onEnter:loadAlsepModel
+ });
+
+ // CHAPTER 6 — SURVEYOR 3
+ // Surveyor 3 shares the continuous lunar surface with Eagle, LRV and ALSEP.
+ const surveyorRoot=new THREE.Group();
+ surveyorRoot.position.set(mobile?4.1:5.0,-2.13,-4.9);
+ surveyorRoot.rotation.y=mobile?-.12:-.2;
+ surveyorRoot.visible=false;
+ surfaceGroup.add(surveyorRoot);
+ let surveyorLoaded=false;
+ const surveyorLoader=new GLTFLoader();
+ surveyorLoader.setMeshoptDecoder(MeshoptDecoder);
+ const surveyorOptimizedUrl="./assets/models/surveyor-3.meshopt-test.glb";
+ const surveyorOriginalUrl="./assets/models/surveyor-3.glb";
+ const loadSurveyorModel=()=>{
+  if(surveyorLoaded||disposed)return;
+  const attachSurveyorModel=gltf=>{
+   if(disposed){
+    gltf.scene.traverse(o=>{
+     o.geometry?.dispose();
+     if(o.material)(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>{
+      Object.values(m).forEach(v=>{if(v?.isTexture)v.dispose();});
+      m.dispose();
+     });
+    });
+    return;
+   }
+   const model=gltf.scene;
+   const bounds=new THREE.Box3().setFromObject(model);
+   const center=bounds.getCenter(new THREE.Vector3());
+   const dimensions=bounds.getSize(new THREE.Vector3());
+   model.position.x-=center.x;
+   model.position.z-=center.z;
+   model.position.y-=bounds.min.y;
+   const horizontalSpan=Math.max(dimensions.x,dimensions.z);
+   const targetLength=mobile?2.8:3.65;
+   surveyorRoot.scale.setScalar(targetLength/Math.max(horizontalSpan,.001));
+   model.traverse(object=>{
+    if(!object.isMesh)return;
+    object.castShadow=true;
+    object.receiveShadow=true;
+    if(Array.isArray(object.material))object.material.forEach(material=>{material.needsUpdate=true;});
+    else if(object.material)object.material.needsUpdate=true;
+   });
+   surveyorRoot.add(model);
+   surveyorRoot.visible=true;
+   surveyorLoaded=true;
+   surveyorScene.classList.add("scene3d-ready");
+   surveyorScene.classList.remove("scene3d-failed");
+   ScrollTrigger.refresh();
+  };
+  const reportProgress=progress=>{
+   if(progress.total>0)mount.dataset.surveyorLoadProgress=String(Math.round(progress.loaded/progress.total*100));
+  };
+  surveyorLoader.load(surveyorOptimizedUrl,attachSurveyorModel,reportProgress,error=>{
+   console.warn("Optimized Surveyor 3 failed to load; trying the original GLB.",error);
+   surveyorLoader.load(surveyorOriginalUrl,attachSurveyorModel,reportProgress,fallbackError=>{
+    console.error("Both optimized and original Surveyor 3 GLBs could not be loaded; retaining the original 2D Surveyor 3 artwork.",fallbackError);
+    surveyorScene.classList.add("scene3d-failed");
+   });
+  });
+ };
+ const surveyorLoadTrigger=ScrollTrigger.create({trigger:surveyorScene,start:"top 125%",once:true,onEnter:loadSurveyorModel});
+
+ // A restrained veil of lunar regolith particles sweeps across the foreground
+ // during the handoff. It is a visual accent, not a simulated atmospheric plume.
+ // CHAPTERS 7–9 — SHARED MARTIAN SURFACE
+ // This red landscape and the shared star field remain continuous behind the Mars rovers.
+ const marsSurfaceGroup=new THREE.Group();marsSurfaceGroup.scale.setScalar(.001);scene.add(marsSurfaceGroup);
+ const marsGroundCanvas=document.createElement("canvas");marsGroundCanvas.width=512;marsGroundCanvas.height=512;
+ const marsGroundCtx=marsGroundCanvas.getContext("2d"),marsGroundBase=marsGroundCtx.createLinearGradient(0,0,512,512);
+ marsGroundBase.addColorStop(0,"#9b513b");marsGroundBase.addColorStop(.48,"#783b2e");marsGroundBase.addColorStop(1,"#b66b4c");marsGroundCtx.fillStyle=marsGroundBase;marsGroundCtx.fillRect(0,0,512,512);
+ for(let i=0;i<11500;i++){const x=Math.random()*512,y=Math.random()*512,r=.4+Math.random()*2.3,shade=75+Math.floor(Math.random()*105);marsGroundCtx.fillStyle="rgba("+shade+","+Math.floor(shade*.56)+","+Math.floor(shade*.43)+","+(Math.random()*.24)+")";marsGroundCtx.beginPath();marsGroundCtx.arc(x,y,r,0,Math.PI*2);marsGroundCtx.fill();}
+ for(let i=0;i<105;i++){const x=Math.random()*512,y=Math.random()*512,r=2+Math.random()*15;marsGroundCtx.strokeStyle="rgba(48,25,21,.24)";marsGroundCtx.lineWidth=1+Math.random()*2;marsGroundCtx.beginPath();marsGroundCtx.arc(x,y,r,0,Math.PI*2);marsGroundCtx.stroke();}
+ const marsGroundTexture=new THREE.CanvasTexture(marsGroundCanvas);marsGroundTexture.colorSpace=THREE.SRGBColorSpace;marsGroundTexture.wrapS=THREE.RepeatWrapping;marsGroundTexture.wrapT=THREE.RepeatWrapping;marsGroundTexture.repeat.set(18,18);marsGroundTexture.anisotropy=Math.min(renderer.capabilities.getMaxAnisotropy(),4);
+ const marsGroundGeometry=new THREE.PlaneGeometry(180,180,90,90),marsGroundPositions=marsGroundGeometry.attributes.position;
+ for(let i=0;i<marsGroundPositions.count;i++){const x=marsGroundPositions.getX(i),z=marsGroundPositions.getY(i);marsGroundPositions.setZ(i,Math.sin(x*.13)*.065+Math.cos(z*.16)*.05+Math.sin((x+z)*.07)*.04);}
+ marsGroundGeometry.computeVertexNormals();marsGroundGeometry.rotateX(-Math.PI/2);
+ const marsGround=new THREE.Mesh(marsGroundGeometry,new THREE.MeshStandardMaterial({map:marsGroundTexture,color:0xc17a59,roughness:1,metalness:0}));marsGround.position.set(0,-2.15,-34);marsGround.receiveShadow=true;marsSurfaceGroup.add(marsGround);
+ const marsRidgeMaterials=[new THREE.MeshStandardMaterial({color:0x542b25,roughness:1}),new THREE.MeshStandardMaterial({color:0x7c4030,roughness:1}),new THREE.MeshStandardMaterial({color:0x98543d,roughness:1})],marsHillGeometry=new THREE.SphereGeometry(1,32,20);
+ [[-25,-1.42,-50,19,2.5,9],[0,-1.5,-55,23,3.1,10],[24,-1.4,-52,19,2.4,9],[43,-1.5,-61,24,3.2,11]].forEach((v,i)=>{const hill=new THREE.Mesh(marsHillGeometry,marsRidgeMaterials[i%marsRidgeMaterials.length]);hill.position.set(v[0],v[1],v[2]);hill.scale.set(v[3],v[4],v[5]);hill.receiveShadow=true;marsSurfaceGroup.add(hill);});
+ const marsRockMaterials=[new THREE.MeshStandardMaterial({color:0x74402f,roughness:1}),new THREE.MeshStandardMaterial({color:0x9b5940,roughness:1}),new THREE.MeshStandardMaterial({color:0x63352b,roughness:1})];
+ for(let i=0;i<(mobile?38:64);i++){const size=.12+Math.random()*.52,rock=new THREE.Mesh(new THREE.DodecahedronGeometry(size,0),marsRockMaterials[i%marsRockMaterials.length]),z=3-Math.random()*32,x=(Math.random()-.5)*(z>-8?23:36);rock.position.set(x,-2.02+Math.random()*.09,z);rock.rotation.set(Math.random()*1.2,Math.random()*Math.PI,Math.random()*1.2);rock.scale.set(.8+Math.random()*.8,.5+Math.random()*.75,.75+Math.random()*.8);rock.castShadow=true;rock.receiveShadow=true;marsSurfaceGroup.add(rock);}
+
+ // Load Opportunity shortly before Chapter 7 enters view; retain its original artwork as fallback.
+ const opportunityRoot=new THREE.Group();opportunityRoot.position.set(mobile?-.2:-.65,-2.13,-4.9);opportunityRoot.rotation.y=mobile?-.08:-.16;opportunityRoot.visible=false;marsSurfaceGroup.add(opportunityRoot);
+ let opportunityLoaded=false;
+ const opportunityLoader=new GLTFLoader();
+ opportunityLoader.setMeshoptDecoder(MeshoptDecoder);
+ const opportunityOptimizedUrl="./assets/models/opportunity-rover.meshopt-test.glb";
+ const opportunityOriginalUrl="./assets/models/opportunity-rover.glb";
+ const loadOpportunityModel=()=>{
+  if(opportunityLoaded||disposed)return;
+  const attachOpportunityModel=gltf=>{
+   if(disposed){
+    gltf.scene.traverse(o=>{
+     o.geometry?.dispose();
+     if(o.material)(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>{
+      Object.values(m).forEach(v=>{if(v?.isTexture)v.dispose();});
+      m.dispose();
+     });
+    });
+    return;
+   }
+   const model=gltf.scene;
+   const bounds=new THREE.Box3().setFromObject(model);
+   const center=bounds.getCenter(new THREE.Vector3());
+   const dimensions=bounds.getSize(new THREE.Vector3());
+   model.position.x-=center.x;
+   model.position.z-=center.z;
+   model.position.y-=bounds.min.y;
+   const horizontalSpan=Math.max(dimensions.x,dimensions.z);
+   const targetLength=mobile?3.15:4.05;
+   opportunityRoot.scale.setScalar(targetLength/Math.max(horizontalSpan,.001));
+   model.traverse(object=>{
+    if(!object.isMesh)return;
+    object.castShadow=true;
+    object.receiveShadow=true;
+    if(Array.isArray(object.material))object.material.forEach(material=>{material.needsUpdate=true;});
+    else if(object.material)object.material.needsUpdate=true;
+   });
+   opportunityRoot.add(model);
+   opportunityRoot.visible=true;
+   opportunityLoaded=true;
+   opportunityScene.classList.add("scene3d-ready");
+   opportunityScene.classList.remove("scene3d-failed");
+   ScrollTrigger.refresh();
+  };
+  const reportProgress=progress=>{
+   if(progress.total>0)mount.dataset.opportunityLoadProgress=String(Math.round(progress.loaded/progress.total*100));
+  };
+  opportunityLoader.load(opportunityOptimizedUrl,attachOpportunityModel,reportProgress,error=>{
+   console.warn("Optimized Opportunity Rover failed to load; trying the original GLB.",error);
+   opportunityLoader.load(opportunityOriginalUrl,attachOpportunityModel,reportProgress,fallbackError=>{
+    console.error("Both optimized and original Opportunity Rover GLBs could not be loaded; retaining the original 2D Opportunity artwork.",fallbackError);
+    opportunityScene.classList.add("scene3d-failed");
+   });
+  });
+ };
+ const opportunityLoadTrigger=ScrollTrigger.create({trigger:opportunityScene,start:"top 125%",once:true,onEnter:loadOpportunityModel});
+
+ // CHAPTER 8 — add Spirit beside Opportunity in the same Martian landscape.
+ // Opportunity remains in the shared scene; Spirit joins as a second rover.
+ const spiritRoot=new THREE.Group();
+ spiritRoot.position.set(mobile?3.8:4.2,-2.13,-5.05);
+ spiritRoot.rotation.y=mobile?-.12:-.18;
+ spiritRoot.visible=false;
+ marsSurfaceGroup.add(spiritRoot);
+ let spiritLoaded=false;
+ const spiritLoader=new GLTFLoader();
+ spiritLoader.setMeshoptDecoder(MeshoptDecoder);
+ const spiritOptimizedUrl="./assets/models/spirit-rover.meshopt-test.glb";
+ const spiritOriginalUrl="./assets/models/spirit-rover.glb";
+ const loadSpiritModel=()=>{
+  if(spiritLoaded||disposed)return;
+  const attachSpiritModel=gltf=>{
+   if(disposed){
+    gltf.scene.traverse(o=>{
+     o.geometry?.dispose();
+     if(o.material)(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>{
+      Object.values(m).forEach(v=>{if(v?.isTexture)v.dispose();});
+      m.dispose();
+     });
+    });
+    return;
+   }
+   const model=gltf.scene;
+   const bounds=new THREE.Box3().setFromObject(model);
+   const center=bounds.getCenter(new THREE.Vector3());
+   const dimensions=bounds.getSize(new THREE.Vector3());
+   model.position.x-=center.x;
+   model.position.z-=center.z;
+   model.position.y-=bounds.min.y;
+   const horizontalSpan=Math.max(dimensions.x,dimensions.z);
+   const targetLength=mobile?2.45:3.05;
+   spiritRoot.scale.setScalar(targetLength/Math.max(horizontalSpan,.001));
+   model.traverse(object=>{
+    if(!object.isMesh)return;
+    object.castShadow=true;
+    object.receiveShadow=true;
+    if(Array.isArray(object.material))object.material.forEach(material=>{material.needsUpdate=true;});
+    else if(object.material)object.material.needsUpdate=true;
+   });
+   spiritRoot.add(model);
+   // The parent group starts hidden so Spirit stays absent until its GLB is ready.
+   // Explicitly reveal it now that the model has loaded successfully.
+   spiritRoot.visible=true;
+   spiritLoaded=true;
+   spiritScene.classList.add("scene3d-ready");
+   spiritScene.classList.remove("scene3d-failed");
+   ScrollTrigger.refresh();
+  };
+  const reportProgress=progress=>{
+   if(progress.total>0)mount.dataset.spiritLoadProgress=String(Math.round(progress.loaded/progress.total*100));
+  };
+  spiritLoader.load(spiritOptimizedUrl,attachSpiritModel,reportProgress,error=>{
+   console.warn("Optimized Spirit Rover failed to load; trying the original GLB.",error);
+   spiritLoader.load(spiritOriginalUrl,attachSpiritModel,reportProgress,fallbackError=>{
+    console.error("Both optimized and original Spirit Rover GLBs could not be loaded; retaining the original 2D Spirit artwork.",fallbackError);
+    spiritScene.classList.add("scene3d-failed");
+   });
+  });
+ };
+ const spiritLoadTrigger=ScrollTrigger.create({trigger:spiritScene,start:"top 125%",once:true,onEnter:loadSpiritModel});
+
+ // CHAPTER 9 — add the InSight lander beside both Mars rovers.
+ // Opportunity and Spirit remain in the shared landscape; InSight joins as a third explorer.
+ const insightRoot=new THREE.Group();
+ insightRoot.position.set(mobile?5.2:6.2,-2.13,-5.25);
+ insightRoot.rotation.y=mobile?-.08:-.12;
+ insightRoot.visible=false;
+ marsSurfaceGroup.add(insightRoot);
+ let insightLoaded=false;
+ const insightLoader=new GLTFLoader();
+ insightLoader.setMeshoptDecoder(MeshoptDecoder);
+ const insightOptimizedUrl="./assets/models/insight-lander.meshopt-test.glb";
+ const insightOriginalUrl="./assets/models/insight-lander.glb";
+ const loadInsightModel=()=>{
+  if(insightLoaded||disposed)return;
+  const attachInsightModel=gltf=>{
+   if(disposed){
+    gltf.scene.traverse(o=>{
+     o.geometry?.dispose();
+     if(o.material)(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>{
+      Object.values(m).forEach(v=>{if(v?.isTexture)v.dispose();});
+      m.dispose();
+     });
+    });
+    return;
+   }
+   const model=gltf.scene;
+   const bounds=new THREE.Box3().setFromObject(model);
+   const center=bounds.getCenter(new THREE.Vector3());
+   const dimensions=bounds.getSize(new THREE.Vector3());
+   model.position.x-=center.x;
+   model.position.z-=center.z;
+   model.position.y-=bounds.min.y;
+   const horizontalSpan=Math.max(dimensions.x,dimensions.z);
+   const targetLength=mobile?1.9:2.45;
+   insightRoot.scale.setScalar(targetLength/Math.max(horizontalSpan,.001));
+   model.traverse(object=>{
