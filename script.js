@@ -20,7 +20,7 @@ BUSSY 67! — SCROLLTELLING ENGINE
 /* ============================================================
    PUBLIC GITHUB REPOSITORY LINK
    ============================================================ */
-const GITHUB_REPO_URL = "";
+const GITHUB_REPO_URL = "https://github.com/laminmaung800u/BUSSY-67.git";
 
 /* ============================================================
    1. DATA
