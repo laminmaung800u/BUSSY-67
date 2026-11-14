@@ -1,1 +1,1458 @@
+/*
+ * BUSSY 67! — Three.js Chapter 01 foundation.
+ * One transparent WebGL scene behind the existing accessible HTML.
+ * Uses the original bus.png as a texture.
+ */
+import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js";
+import { GLTFLoader } from "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/loaders/GLTFLoader.js";
+import { MeshoptDecoder } from "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/libs/meshopt_decoder.module.js";
 
+export async function createStoryExperience({mount,landingScene,travelScene,marsTravelScene,surfaceScene,lrvScene,alsepScene,surveyorScene,opportunityScene,spiritScene,insightScene,pathfinderScene,returnScene,finalScene,gsap,ScrollTrigger}){
+ if(!mount||!landingScene||!travelScene||!marsTravelScene||!surfaceScene||!lrvScene||!alsepScene||!surveyorScene||!opportunityScene||!spiritScene||!insightScene||!pathfinderScene||!returnScene||!finalScene||!gsap||!ScrollTrigger)throw new Error("Missing 3D mount, story scenes or animation dependencies.");
+ const reduced=matchMedia("(prefers-reduced-motion: reduce)").matches;
+ const mobile=matchMedia("(max-width: 620px)").matches;
+ const isPortrait=()=>matchMedia("(orientation: portrait)").matches&&Math.min(innerWidth,innerHeight)<=620;
+ const isNarrow=()=>Math.min(innerWidth,innerHeight)<=620;
+ const lowPower=(navigator.hardwareConcurrency||4)<=4;
+ const pixelCap=reduced||lowPower?1.25:mobile?1.5:1.8;
+ let disposed=false,pageVisible=!document.hidden,sceneVisible=true,raf=0,last=0;
+ const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(42,1,.1,100);
+ camera.position.set(0,0,8.6);
+ const renderer=new THREE.WebGLRenderer({alpha:true,antialias:!lowPower,powerPreference:"high-performance",stencil:false,depth:true});
+ renderer.setPixelRatio(Math.min(devicePixelRatio||1,pixelCap));
+ renderer.setSize(mount.clientWidth||innerWidth,mount.clientHeight||innerHeight,false);
+ renderer.outputColorSpace=THREE.SRGBColorSpace;
+ renderer.shadowMap.enabled=true;
+ renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+ renderer.toneMapping=THREE.ACESFilmicToneMapping;
+ renderer.toneMappingExposure=1.15;
+ mount.appendChild(renderer.domElement);
+ scene.add(new THREE.AmbientLight(0x9dbdff,1.15));
+ const key=new THREE.DirectionalLight(0xffe2b5,2.4);
+ key.position.set(-4,5,7);key.castShadow=true;
+ key.shadow.mapSize.set(1024,1024);
+ key.shadow.camera.left=-24;key.shadow.camera.right=24;
+ key.shadow.camera.top=24;key.shadow.camera.bottom=-24;
+ scene.add(key);
+
+ // Procedural stylized Earth texture; illustrative rather than geographic data.
+ const mapCanvas=document.createElement("canvas");mapCanvas.width=1024;mapCanvas.height=512;
+ const ctx=mapCanvas.getContext("2d"),ocean=ctx.createLinearGradient(0,0,1024,512);
+ ocean.addColorStop(0,"#174b83");ocean.addColorStop(.5,"#0b2c59");ocean.addColorStop(1,"#06162f");
+ ctx.fillStyle=ocean;ctx.fillRect(0,0,1024,512);
+ const land=ctx.createLinearGradient(0,80,0,450);land.addColorStop(0,"#8aab72");land.addColorStop(.55,"#527d59");land.addColorStop(1,"#b2a477");ctx.fillStyle=land;
+ const shapes=[
+ [[115,112],[160,76],[213,83],[240,121],[218,151],[190,170],[178,215],[145,230],[123,190],[93,165]],
+ [[205,235],[247,250],[260,302],[238,355],[215,397],[192,350],[181,296]],
+ [[420,105],[462,81],[501,95],[518,131],[489,158],[455,150]],
+ [[480,172],[529,183],[550,236],[534,300],[501,350],[475,306],[458,245]],
+ [[610,110],[656,87],[712,100],[750,133],[725,167],[681,176],[650,151]],
+ [[690,208],[735,205],[765,250],[745,310],[709,329],[682,279]],
+ [[820,300],[860,278],[895,302],[886,339],[846,350]]
+ ];
+ shapes.forEach(p=>{ctx.beginPath();p.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.closePath();ctx.fill();});
+ const ice=ctx.createLinearGradient(0,0,0,65);ice.addColorStop(0,"rgba(225,242,255,.92)");ice.addColorStop(1,"rgba(225,242,255,0)");ctx.fillStyle=ice;ctx.fillRect(0,0,1024,65);
+ const earthMap=new THREE.CanvasTexture(mapCanvas);earthMap.colorSpace=THREE.SRGBColorSpace;earthMap.anisotropy=Math.min(renderer.capabilities.getMaxAnisotropy(),4);
+ const earthGroup=new THREE.Group();earthGroup.position.set(mobile?-.75:-3.25,mobile?.72:-.25,mobile?-1.8:-1.35);earthGroup.scale.setScalar(mobile?.58:1);scene.add(earthGroup);
+ const earth=new THREE.Mesh(new THREE.SphereGeometry(2.05,lowPower?40:64,lowPower?32:48),new THREE.MeshStandardMaterial({map:earthMap,roughness:.92,metalness:.02}));earthGroup.add(earth);
+ earthGroup.add(new THREE.Mesh(new THREE.SphereGeometry(2.13,48,32),new THREE.MeshBasicMaterial({color:0x56aaff,transparent:true,opacity:.19,side:THREE.BackSide,blending:THREE.AdditiveBlending,depthWrite:false})));
+ earthGroup.add(new THREE.Mesh(new THREE.SphereGeometry(2.17,48,32),new THREE.MeshBasicMaterial({color:0x9bdcff,transparent:true,opacity:.075,side:THREE.BackSide,depthWrite:false})));
+ // A realistic lunar globe using NASA's LRO/LROC 2025 color map.
+ // NASA SVS CGI Moon Kit: https://svs.gsfc.nasa.gov/4720/
+ // 2K map (2048x1024); a procedural crater map remains available if the CDN fails.
+ const moonCanvas=document.createElement("canvas");moonCanvas.width=1024;moonCanvas.height=512;
+ const moonCtx=moonCanvas.getContext("2d");
+ const moonBase=moonCtx.createLinearGradient(0,0,1024,512);
+ moonBase.addColorStop(0,"#a09d96");moonBase.addColorStop(.5,"#77756f");moonBase.addColorStop(1,"#aaa69d");
+ moonCtx.fillStyle=moonBase;moonCtx.fillRect(0,0,1024,512);
+ for(let i=0;i<430;i++){
+   const x=Math.random()*1024,y=Math.random()*512,r=2+Math.random()*19;
+   const crater=moonCtx.createRadialGradient(x-r*.22,y-r*.25,r*.12,x,y,r);
+   crater.addColorStop(0,"rgba(47,47,46,.46)");crater.addColorStop(.55,"rgba(83,82,78,.23)");
+   crater.addColorStop(.82,"rgba(190,187,178,.12)");crater.addColorStop(1,"rgba(45,45,44,.2)");
+   moonCtx.fillStyle=crater;moonCtx.beginPath();moonCtx.arc(x,y,r,0,Math.PI*2);moonCtx.fill();
+ }
+ const fallbackMoonMap=new THREE.CanvasTexture(moonCanvas);
+ fallbackMoonMap.colorSpace=THREE.SRGBColorSpace;
+ fallbackMoonMap.anisotropy=Math.min(renderer.capabilities.getMaxAnisotropy(),4);
+ const moonMaterial=new THREE.MeshStandardMaterial({map:fallbackMoonMap,bumpMap:fallbackMoonMap,bumpScale:.035,roughness:1,metalness:0});
+ const moonGroup=new THREE.Group();
+ moonGroup.position.set(mobile?1.0:4.8,mobile?1.35:.45,-2.55);
+ moonGroup.scale.setScalar(.075);
+ scene.add(moonGroup);
+ const moon=new THREE.Mesh(new THREE.SphereGeometry(2.05,lowPower?48:72,lowPower?36:56),moonMaterial);
+ moonGroup.add(moon);
+ const moonTextureUrl="https://svs.gsfc.nasa.gov/vis/a000000/a004700/a004720/lroc_color_2k.jpg";
+ const moonLoader=new THREE.TextureLoader();moonLoader.setCrossOrigin("anonymous");
+ const releaseFallbackMoonMap=()=>{
+   if(moonMaterial.map!==fallbackMoonMap&&moonMaterial.bumpMap!==fallbackMoonMap)fallbackMoonMap.dispose();
+ };
+ moonLoader.load(moonTextureUrl,texture=>{
+   if(disposed){texture.dispose();return;}
+   texture.colorSpace=THREE.SRGBColorSpace;
+   texture.anisotropy=Math.min(renderer.capabilities.getMaxAnisotropy(),4);
+   moonMaterial.map=texture;
+   moonMaterial.needsUpdate=true;
+   releaseFallbackMoonMap();
+ },undefined,()=>{ /* The procedural crater texture remains as a graceful offline fallback. */ });
+ // NASA LOLA elevation map adds genuine crater and terrain relief through bump mapping.
+ const heightLoader=new THREE.TextureLoader();heightLoader.setCrossOrigin("anonymous");
+ heightLoader.load("https://svs.gsfc.nasa.gov/vis/a000000/a004700/a004720/ldem_3_8bit.jpg",texture=>{
+   if(disposed){texture.dispose();return;}
+   texture.colorSpace=THREE.NoColorSpace;
+   texture.anisotropy=Math.min(renderer.capabilities.getMaxAnisotropy(),4);
+   moonMaterial.bumpMap=texture;
+   moonMaterial.bumpScale=.045;
+   moonMaterial.needsUpdate=true;
+   releaseFallbackMoonMap();
+ },undefined,()=>{ /* Keep the color map and its subtle procedural relief if height data is unavailable. */ });
+
+
+ const count=lowPower?420:mobile?650:1050,positions=new Float32Array(count*3);
+ for(let i=0;i<count;i++){positions[i*3]=(Math.random()-.5)*24;positions[i*3+1]=(Math.random()-.5)*13;positions[i*3+2]=-7-Math.random()*16;}
+ const starGeometry=new THREE.BufferGeometry();starGeometry.setAttribute("position",new THREE.BufferAttribute(positions,3));
+ const stars=new THREE.Points(starGeometry,new THREE.PointsMaterial({color:0xdceaff,size:.035,transparent:true,opacity:.88,depthWrite:false}));scene.add(stars);
+
+ // CHAPTER 6 — PROCEDURAL 3D MARS
+ // A locally generated equirectangular surface keeps the globe self-contained.
+ const marsCanvas=document.createElement("canvas");
+ marsCanvas.width=1024;marsCanvas.height=512;
+ const marsCtx=marsCanvas.getContext("2d");
+ const marsBase=marsCtx.createLinearGradient(0,0,1024,512);
+ marsBase.addColorStop(0,"#b96848");marsBase.addColorStop(.34,"#9f4d36");
+ marsBase.addColorStop(.68,"#c77b55");marsBase.addColorStop(1,"#6f3027");
+ marsCtx.fillStyle=marsBase;marsCtx.fillRect(0,0,1024,512);
+ for(let i=0;i<95;i++){
+   const x=Math.random()*1024,y=30+Math.random()*452,rw=18+Math.random()*100,rh=8+Math.random()*42;
+   marsCtx.fillStyle=Math.random()>.52?"rgba(75,35,29,.17)":"rgba(235,157,105,.16)";
+   marsCtx.beginPath();marsCtx.ellipse(x,y,rw,rh,Math.random()*.8,0,Math.PI*2);marsCtx.fill();
+ }
+ for(let i=0;i<360;i++){
+   const x=Math.random()*1024,y=20+Math.random()*472,r=1.5+Math.random()*12;
+   const crater=marsCtx.createRadialGradient(x-r*.24,y-r*.28,r*.08,x,y,r);
+   crater.addColorStop(0,"rgba(72,35,29,.34)");crater.addColorStop(.52,"rgba(93,43,32,.18)");
+   crater.addColorStop(.78,"rgba(232,157,111,.19)");crater.addColorStop(1,"rgba(67,31,27,.22)");
+   marsCtx.fillStyle=crater;marsCtx.beginPath();marsCtx.arc(x,y,r,0,Math.PI*2);marsCtx.fill();
+ }
+ const northCap=marsCtx.createLinearGradient(0,0,0,58);
+ northCap.addColorStop(0,"rgba(239,216,190,.78)");northCap.addColorStop(1,"rgba(239,216,190,0)");
+ marsCtx.fillStyle=northCap;marsCtx.fillRect(0,0,1024,58);
+ const southCap=marsCtx.createLinearGradient(0,454,0,512);
+ southCap.addColorStop(0,"rgba(239,216,190,0)");southCap.addColorStop(1,"rgba(239,216,190,.68)");
+ marsCtx.fillStyle=southCap;marsCtx.fillRect(0,454,1024,58);
+ const marsTexture=new THREE.CanvasTexture(marsCanvas);
+ marsTexture.colorSpace=THREE.SRGBColorSpace;
+ marsTexture.anisotropy=Math.min(renderer.capabilities.getMaxAnisotropy(),4);
+ const marsGroup=new THREE.Group();
+ marsGroup.position.set(mobile?2.5:3.4,.55,-8.8);
+ marsGroup.scale.setScalar(.001);
+ scene.add(marsGroup);
+ const marsSphere=new THREE.Mesh(
+   new THREE.SphereGeometry(2.05,lowPower?48:72,lowPower?36:56),
+   new THREE.MeshStandardMaterial({map:marsTexture,roughness:.98,metalness:0})
+ );
+ marsGroup.add(marsSphere);
+ marsGroup.add(new THREE.Mesh(
+   new THREE.SphereGeometry(2.16,48,36),
+   new THREE.MeshBasicMaterial({color:0xe87952,transparent:true,opacity:.17,side:THREE.BackSide,blending:THREE.AdditiveBlending,depthWrite:false})
+ ));
+
+ // Build BUSSY as a real low-poly 3D school bus from reusable Three.js meshes.
+ // This replaces the flat PNG plane; the original PNG remains untouched in assets.
+ const bus=new THREE.Group();
+ bus.position.set(mobile?.35:1.7,mobile?-1.48:-1.35,mobile?.85:1.25);
+ bus.scale.setScalar(mobile?.62:.94);
+ bus.rotation.y=-.34;
+ bus.rotation.z=-.035;
+ scene.add(bus);
+
+ const mat=(color,roughness=.72,metalness=.02)=>new THREE.MeshStandardMaterial({color,roughness,metalness});
+ const yellow=mat(0xffc928,.58),yellowLight=mat(0xffdc55,.55),yellowDark=mat(0xd99b12,.7);
+ const glass=mat(0x17344e,.28,.18),rubber=mat(0x111722,.94),hub=mat(0xb8c6d5,.38,.55);
+ const trim=mat(0x202a36,.72),white=mat(0xf5f3e8,.38),red=mat(0xe84b42,.45),blue=mat(0x65c9f2,.32,.12);
+
+ const makeBox=(parent,w,h,d,material,x,y,z,rx=0,ry=0,rz=0)=>{
+   const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);
+   mesh.position.set(x,y,z);mesh.rotation.set(rx,ry,rz);parent.add(mesh);return mesh;
+ };
+ const bodyShape=new THREE.Shape();
+ bodyShape.moveTo(-1.62,-.53);
+ bodyShape.lineTo(1.22,-.53);
+ bodyShape.quadraticCurveTo(1.63,-.53,1.66,-.16);
+ bodyShape.lineTo(1.66,.34);
+ bodyShape.quadraticCurveTo(1.66,.66,1.34,.66);
+ bodyShape.lineTo(-1.34,.66);
+ bodyShape.quadraticCurveTo(-1.66,.66,-1.66,.34);
+ bodyShape.lineTo(-1.66,-.53);
+ bodyShape.closePath();
+ const bodyGeometry=new THREE.ExtrudeGeometry(bodyShape,{depth:1.18,bevelEnabled:true,bevelSegments:3,steps:1,bevelSize:.055,bevelThickness:.055,curveSegments:8});
+ bodyGeometry.translate(0,0,-.59);
+ const body=new THREE.Mesh(bodyGeometry,yellow);bus.add(body);
+
+ // Roof cap and lower chassis give the silhouette real depth.
+ makeBox(bus,2.72,.12,1.22,yellowLight,-.02,.63,0);
+ makeBox(bus,2.92,.18,1.12,trim,-.02,-.51,0);
+ makeBox(bus,2.95,.12,1.2,yellowDark,-.02,-.36,0);
+
+ // Large side windows, with individual frames and central pillars.
+ for(const side of [-1,1]){
+   const z=side*.603;
+   for(let i=0;i<4;i++){
+     const x=-1.08+i*.59;
+     makeBox(bus,.49,.39,.035,trim,x,.28,z);
+     makeBox(bus,.425,.325,.025,glass,x,.29,z+side*.022);
+     makeBox(bus,.035,.34,.035,yellowLight,x-.255,.29,z+side*.025);
+     makeBox(bus,.035,.34,.035,yellowLight,x+.255,.29,z+side*.025);
+   }
+   // Side emergency door and its small window.
+   makeBox(bus,.34,.72,.04,yellowDark,1.18,.02,z);
+   makeBox(bus,.25,.32,.035,glass,1.18,.28,z+side*.025);
+   makeBox(bus,2.7,.095,.035,yellowDark,-.02,-.17,z+side*.025);
+   makeBox(bus,2.68,.035,.04,trim,-.02,-.25,z+side*.03);
+ }
+
+ // Front windshield, split into two panes; facing the bus's +X direction.
+ makeBox(bus,.055,.55,.94,trim,1.57,.27,0,0,0,-.12);
+ makeBox(bus,.045,.46,.40,glass,1.612,.29,-.235,0,0,-.12);
+ makeBox(bus,.045,.46,.40,glass,1.612,.29,.235,0,0,-.12);
+
+ makeBox(bus,.08,.08,1.02,yellowLight,1.57,.59,0,0,0,-.12);
+
+ // BUSSY's expressive face: glossy eyes seated on the front windshield.
+ // The eye geometry is part of the 3D bus, not a 2D decal.
+ const eyeWhite=mat(0xfffdf5,.24);
+ const iris=mat(0x45a9d8,.22,.08);
+ const pupil=mat(0x101a2a,.18);
+ const eyeSparkle=new THREE.MeshBasicMaterial({color:0xffffff});
+ for(const side of [-1,1]){
+   const z=side*.225;
+   const eye=new THREE.Mesh(new THREE.SphereGeometry(.145,24,18),eyeWhite);
+   eye.scale.set(.72,1,1);
+   eye.position.set(1.685,.345,z);
+   bus.add(eye);
+
+   const irisBall=new THREE.Mesh(new THREE.SphereGeometry(.083,20,16),iris);
+   irisBall.scale.set(.68,1,1);
+   irisBall.position.set(1.785,.34,z-side*.025);
+   bus.add(irisBall);
+
+   const pupilBall=new THREE.Mesh(new THREE.SphereGeometry(.048,18,14),pupil);
+   pupilBall.scale.set(.65,1,1);
+   pupilBall.position.set(1.84,.34,z-side*.035);
+   bus.add(pupilBall);
+
+   const sparkle=new THREE.Mesh(new THREE.SphereGeometry(.019,12,10),eyeSparkle);
+   sparkle.position.set(1.875,.375,z-side*.045);
+   bus.add(sparkle);
+
+   // Soft curved brows give the character a friendly, curious expression.
+   const browCurve=new THREE.CatmullRomCurve3([
+     new THREE.Vector3(1.69,.51,z-side*.13),
+     new THREE.Vector3(1.71,.56,z),
+     new THREE.Vector3(1.69,.52,z+side*.13)
+   ]);
+   const brow=new THREE.Mesh(new THREE.TubeGeometry(browCurve,12,.025,8,false),yellowDark);
+   bus.add(brow);
+ }
+
+ // A curved smile sits on the front panel below the windshield.
+ const smileCurve=new THREE.CatmullRomCurve3([
+   new THREE.Vector3(1.835,-.155,-.29),
+   new THREE.Vector3(1.855,-.205,-.17),
+   new THREE.Vector3(1.86,-.225,0),
+   new THREE.Vector3(1.855,-.205,.17),
+   new THREE.Vector3(1.835,-.155,.29)
+ ]);
+ const smile=new THREE.Mesh(
+   new THREE.TubeGeometry(smileCurve,28,.027,10,false),
+   mat(0x54251d,.55)
+ );
+ bus.add(smile);
+
+ // Tiny warm cheek lights add a little character without cluttering the body.
+ for(const side of [-1,1]){
+   const cheek=new THREE.Mesh(new THREE.SphereGeometry(.055,14,10),mat(0xff9a68,.65));
+   cheek.scale.set(.45,.7,1);
+   cheek.position.set(1.72,-.095,side*.38);
+   bus.add(cheek);
+ }
+
+ // Friendly front bumper, grille and bright headlights.
+ makeBox(bus,.22,.17,1.25,trim,1.68,-.39,0);
+ makeBox(bus,.045,.22,.42,hub,1.80,-.20,0);
+ for(const z of [-.43,.43]){
+   const lamp=new THREE.Mesh(new THREE.SphereGeometry(.105,16,12),white);
+   lamp.position.set(1.72,-.12,z);bus.add(lamp);
+   const lens=new THREE.Mesh(new THREE.SphereGeometry(.055,12,8),blue);
+   lens.position.set(1.79,-.12,z);bus.add(lens);
+ }
+ makeBox(bus,.06,.12,.48,red,-1.68,-.22,0);
+
+ // Four chunky tires, with metallic hubs on both sides.
+ for(const x of [-1.03,1.03]){
+   for(const side of [-1,1]){
+     const tire=new THREE.Mesh(new THREE.CylinderGeometry(.34,.34,.19,24),rubber);
+     tire.rotation.x=Math.PI/2;tire.position.set(x,-.48,side*.62);bus.add(tire);
+     const wheelHub=new THREE.Mesh(new THREE.CylinderGeometry(.19,.19,.205,20),hub);
+     wheelHub.rotation.x=Math.PI/2;wheelHub.position.set(x,-.48,side*.62);bus.add(wheelHub);
+     const center=new THREE.Mesh(new THREE.CylinderGeometry(.075,.075,.215,16),trim);
+     center.rotation.x=Math.PI/2;center.position.set(x,-.48,side*.62);bus.add(center);
+   }
+ }
+ // Roof lights and a small destination panel add the familiar school-bus details.
+ for(const z of [-.43,0,.43]){
+   const marker=new THREE.Mesh(new THREE.SphereGeometry(.055,12,8),red);
+   marker.position.set(-1.32,.72,z);bus.add(marker);
+ }
+ makeBox(bus,.52,.15,.035,trim,-.9,.78,.62);
+ makeBox(bus,.39,.075,.02,white,-.9,.78,.645);
+ const glow=new THREE.PointLight(0x4c9fff,18,12,2);glow.position.set(-1.6,1.8,3.5);scene.add(glow);
+
+ // CHAPTER 11 — a bright, welcoming Earth landscape.
+ // The group remains hidden until the globe zoom has reached its close-up.
+ const homecoming=new THREE.Group();
+ homecoming.scale.setScalar(.001);
+ scene.add(homecoming);
+
+ const daytimeSky=new THREE.Mesh(
+   new THREE.SphereGeometry(78,32,20),
+   new THREE.MeshBasicMaterial({color:0x83c9f4,side:THREE.BackSide})
+ );
+ homecoming.add(daytimeSky);
+
+ const meadow=new THREE.Mesh(
+   new THREE.PlaneGeometry(180,180,1,1),
+   new THREE.MeshStandardMaterial({color:0x69a94f,roughness:1})
+ );
+ meadow.rotation.x=-Math.PI/2;
+ meadow.position.set(0,-2.24,-28);
+ meadow.receiveShadow=true;
+ homecoming.add(meadow);
+
+ const road=new THREE.Mesh(
+   new THREE.PlaneGeometry(8.4,115),
+   new THREE.MeshStandardMaterial({color:0x454c53,roughness:.96})
+ );
+ road.rotation.x=-Math.PI/2;
+ road.position.set(0,-2.205,-25);
+ road.receiveShadow=true;
+ homecoming.add(road);
+
+ const vergeMaterials=[mat(0x579443,1),mat(0x78b957,1),mat(0x91c967,1)];
+ for(let i=0;i<(mobile?34:58);i++){
+   const side=i%2===0?-1:1,z=-4-Math.random()*43,x=side*(5.2+Math.random()*22);
+   const patch=new THREE.Mesh(new THREE.SphereGeometry(.35+Math.random()*.8,8,6),vergeMaterials[i%vergeMaterials.length]);
+   patch.position.set(x,-2.14+Math.random()*.08,z);
+   patch.scale.set(1.2,.12,.7);
+   homecoming.add(patch);
+ }
+
+ const laneMarkMaterial=new THREE.MeshBasicMaterial({color:0xf6e7a9});
+ for(let i=0;i<13;i++){
+   const dash=new THREE.Mesh(new THREE.BoxGeometry(.12,.025,2.15),laneMarkMaterial);
+   dash.position.set(0,-2.185,8-i*7.3);
+   homecoming.add(dash);
+ }
+
+ const hillMaterial=[mat(0x78b65d,1),mat(0x68a653,1),mat(0x8bc56b,1)];
+ [[-24,-1.65,-48,20,5,8],[0,-1.8,-55,27,6,9],[25,-1.65,-49,22,5,8]].forEach((v,i)=>{
+   const hill=new THREE.Mesh(new THREE.SphereGeometry(1,24,16),hillMaterial[i]);
+   hill.position.set(v[0],v[1],v[2]);hill.scale.set(v[3],v[4],v[5]);homecoming.add(hill);
+ });
+
+ const cloudMaterial=new THREE.MeshStandardMaterial({color:0xffffff,roughness:1});
+ for(let i=0;i<(mobile?5:8);i++){
+   const cloud=new THREE.Group(),x=(i-(mobile?2:3.5))*9,z=-23-(i%3)*10,y=7+(i%2)*2;
+   [[0,0,0,1.6],[1.15,.12,0,1.25],[-1.05,.08,.08,1.15],[.25,.55,0,1.05]].forEach(([cx,cy,cz,r])=>{
+     const puff=new THREE.Mesh(new THREE.SphereGeometry(r,12,9),cloudMaterial);
+     puff.position.set(cx,cy,cz);puff.scale.y=.68;cloud.add(puff);
+   });
+   cloud.position.set(x,y,z);homecoming.add(cloud);
+ }
+
+ // A few tiny wildflowers add a friendly storybook finish to the grass verge.
+ const flowerStem=mat(0x3e7837,1),flowerPetals=[mat(0xffe8a5,1),mat(0xffffff,1),mat(0xffd1dc,1)];
+ for(let i=0;i<(mobile?16:28);i++){
+   const x=(Math.random()-.5)*28,z=-3-Math.random()*26;
+   if(Math.abs(x)<5.2)continue;
+   const stem=new THREE.Mesh(new THREE.CylinderGeometry(.018,.024,.24,5),flowerStem);
+   stem.position.set(x,-2.02,z);homecoming.add(stem);
+   const bloom=new THREE.Mesh(new THREE.SphereGeometry(.075,8,6),flowerPetals[i%flowerPetals.length]);
+   bloom.position.set(x,-1.89,z);homecoming.add(bloom);
+ }
+
+ // Add a fully modeled school campus behind BUSSY. The front entrance faces
+ // the road, so the bus appears to have arrived at its destination.
+ const schoolCampus=new THREE.Group();
+ schoolCampus.position.set(0,-2.2,-32);
+ homecoming.add(schoolCampus);
+
+ const schoolWall=mat(0xf1dfb9,.92),schoolTrim=mat(0xf7f0dc,.8);
+ const schoolRoof=mat(0xc65b48,.86),schoolGlass=mat(0x75c9e8,.3,.08);
+ const schoolDoor=mat(0x315b72,.65),schoolFrame=mat(0xfff3d6,.8);
+ makeBox(schoolCampus,18,5.2,4.6,schoolWall,0,2.6,0);
+ makeBox(schoolCampus,18.5,.28,4.9,schoolTrim,0,5.18,0);
+
+ // A simple gabled roof gives the building a recognizable school silhouette.
+ const roofShape=new THREE.Shape();
+ roofShape.moveTo(-9.35,0);
+ roofShape.lineTo(0,2.35);
+ roofShape.lineTo(9.35,0);
+ roofShape.closePath();
+ const roofGeometry=new THREE.ExtrudeGeometry(roofShape,{depth:4.95,bevelEnabled:false,steps:1});
+ roofGeometry.translate(0,0,-2.475);
+ const roofMesh=new THREE.Mesh(roofGeometry,schoolRoof);
+ roofMesh.position.y=5.28;
+ roofMesh.castShadow=true;
+ schoolCampus.add(roofMesh);
+
+ // Front windows, frames and the central entrance.
+ for(const x of [-6.7,-3.7,3.7,6.7]){
+   makeBox(schoolCampus,1.95,1.55,.16,schoolFrame,x,3.55,2.34);
+   makeBox(schoolCampus,1.68,1.28,.08,schoolGlass,x,3.55,2.445);
+   makeBox(schoolCampus,.07,1.3,.1,schoolFrame,x,3.55,2.5);
+   makeBox(schoolCampus,1.7,.07,.1,schoolFrame,x,3.55,2.5);
+ }
+ makeBox(schoolCampus,2.05,2.65,.2,schoolTrim,0,1.32,2.36);
+ makeBox(schoolCampus,1.72,2.38,.12,schoolDoor,0,1.25,2.49);
+ makeBox(schoolCampus,.12,.12,.16,schoolFrame,.62,1.2,2.57);
+ makeBox(schoolCampus,3.25,.28,1.35,schoolTrim,0,.14,3.02);
+ makeBox(schoolCampus,2.55,.22,.9,schoolFrame,0,.36,2.82);
+
+ // A readable sign is painted onto a small 3D board above the entrance.
+ const schoolSignCanvas=document.createElement("canvas");
+ schoolSignCanvas.width=768;schoolSignCanvas.height=128;
+ const schoolSignCtx=schoolSignCanvas.getContext("2d");
+ schoolSignCtx.fillStyle="#244b63";
+ schoolSignCtx.fillRect(0,0,768,128);
+ schoolSignCtx.fillStyle="#fff3d6";
+ schoolSignCtx.font="bold 66px Arial";
+ schoolSignCtx.textAlign="center";
+ schoolSignCtx.textBaseline="middle";
+ schoolSignCtx.fillText("OUR SCHOOL",384,66);
+ const schoolSignTexture=new THREE.CanvasTexture(schoolSignCanvas);
+ schoolSignTexture.colorSpace=THREE.SRGBColorSpace;
+ const schoolSign=new THREE.Mesh(
+   new THREE.PlaneGeometry(5.7,.9),
+   new THREE.MeshBasicMaterial({map:schoolSignTexture})
+ );
+ schoolSign.position.set(0,4.55,2.49);
+ schoolCampus.add(schoolSign);
+
+ // Flagpole and a small bright flag at the front corner.
+ const pole=new THREE.Mesh(new THREE.CylinderGeometry(.045,.06,6.2,10),schoolFrame);
+ pole.position.set(-9.9,3.1,1.1);
+ schoolCampus.add(pole);
+ const flagShape=new THREE.Shape();
+ flagShape.moveTo(0,0);flagShape.lineTo(1.7,-.15);flagShape.lineTo(0,-.85);flagShape.closePath();
+ const flag=new THREE.Mesh(new THREE.ShapeGeometry(flagShape),mat(0xe85b50,.8));
+ flag.position.set(-9.88,5.8,1.15);
+ schoolCampus.add(flag);
+
+ // Trees frame the campus without hiding the building or road.
+ const trunkMaterial=mat(0x805536,1),leafMaterials=[mat(0x4e9149,1),mat(0x68aa55,1),mat(0x82bd62,1)];
+ for(const side of [-1,1]){
+   for(let i=0;i<2;i++){
+     const tree=new THREE.Group();
+     tree.position.set(side*(11.2+i*2.2),0,-27-i*5);
+     const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.2,.3,2.8,9),trunkMaterial);
+     trunk.position.y=1.4;tree.add(trunk);
+     [[0,3.5,0,1.55],[.75,4.05,.1,1.05],[-.7,4.0,-.1,1.05]].forEach(([x,y,z,r],j)=>{
+       const crown=new THREE.Mesh(new THREE.SphereGeometry(r,12,9),leafMaterials[(i+j)%leafMaterials.length]);
+       crown.position.set(x,y,z);crown.scale.y=1.12;tree.add(crown);
+     });
+     schoolCampus.add(tree);
+   }
+ }
+
+ // Park BUSSY on the road, facing the viewer, and stop its in-flight bob.
+
+
+
+ // CHAPTER 3 — FIRST-PERSON LUNAR SURFACE
+ const surfaceGroup=new THREE.Group();
+ surfaceGroup.scale.setScalar(.001);
+ scene.add(surfaceGroup);
+
+ // Procedural regolith texture.
+ const regolithCanvas=document.createElement("canvas");
+ regolithCanvas.width=512;regolithCanvas.height=512;
+ const regolithCtx=regolithCanvas.getContext("2d");
+ regolithCtx.fillStyle="#77746d";regolithCtx.fillRect(0,0,512,512);
+ for(let i=0;i<9500;i++){
+   const x=Math.random()*512,y=Math.random()*512,r=.35+Math.random()*2.1;
+   const shade=70+Math.floor(Math.random()*100);
+   regolithCtx.fillStyle="rgba("+shade+","+shade+","+Math.max(65,shade-5)+","+(Math.random()*.22)+")";
+   regolithCtx.beginPath();regolithCtx.arc(x,y,r,0,Math.PI*2);regolithCtx.fill();
+ }
+ for(let i=0;i<95;i++){
+   const x=Math.random()*512,y=Math.random()*512,r=2+Math.random()*13;
+   regolithCtx.strokeStyle="rgba(35,35,34,.24)";regolithCtx.lineWidth=1+Math.random()*2;
+   regolithCtx.beginPath();regolithCtx.arc(x,y,r,0,Math.PI*2);regolithCtx.stroke();
+ }
+ const regolithTexture=new THREE.CanvasTexture(regolithCanvas);
+ regolithTexture.colorSpace=THREE.SRGBColorSpace;
+ regolithTexture.wrapS=THREE.RepeatWrapping;regolithTexture.wrapT=THREE.RepeatWrapping;
+ regolithTexture.repeat.set(18,18);
+ regolithTexture.anisotropy=Math.min(renderer.capabilities.getMaxAnisotropy(),4);
+
+ const groundGeometry=new THREE.PlaneGeometry(180,180,90,90);
+ const groundPositions=groundGeometry.attributes.position;
+ for(let i=0;i<groundPositions.count;i++){
+   const x=groundPositions.getX(i),z=groundPositions.getY(i);
+   groundPositions.setZ(i,Math.sin(x*.17)*.055+Math.cos(z*.13)*.045+Math.sin((x+z)*.075)*.035);
+ }
+ groundGeometry.computeVertexNormals();groundGeometry.rotateX(-Math.PI/2);
+ const groundMaterial=new THREE.MeshStandardMaterial({map:regolithTexture,color:0xb0aaa0,roughness:1,metalness:0});
+ const ground=new THREE.Mesh(groundGeometry,groundMaterial);
+ ground.position.set(0,-2.15,-34);ground.receiveShadow=true;surfaceGroup.add(ground);
+
+ // Distant crater rims and low lunar ridges.
+ const ridgeMaterial=new THREE.MeshStandardMaterial({color:0x45464a,roughness:1});
+ const ridgeLightMaterial=new THREE.MeshStandardMaterial({color:0x66635d,roughness:1});
+ const hillGeometry=new THREE.SphereGeometry(1,28,18);
+ [
+   [-23,-1.35,-49,18,2.1,8],[-3,-1.45,-54,20,2.6,9],
+   [20,-1.4,-51,17,2.0,8],[39,-1.5,-60,22,2.8,10]
+ ].forEach((v,i)=>{
+   const hill=new THREE.Mesh(hillGeometry,i%2?ridgeMaterial:ridgeLightMaterial);
+   hill.position.set(v[0],v[1],v[2]);hill.scale.set(v[3],v[4],v[5]);
+   hill.receiveShadow=true;surfaceGroup.add(hill);
+ });
+
+ const craterRimMaterial=new THREE.MeshStandardMaterial({color:0x96918a,roughness:1});
+ const craterFloorMaterial=new THREE.MeshStandardMaterial({color:0x56534e,roughness:1});
+ [[-5,-13,1.8],[7,-22,2.4],[-13,-29,2.1]].forEach((v)=>{
+   const floor=new THREE.Mesh(new THREE.CircleGeometry(v[2]*.9,40),craterFloorMaterial);
+   floor.rotation.x=-Math.PI/2;floor.position.set(v[0],-2.105,v[1]);surfaceGroup.add(floor);
+   const rim=new THREE.Mesh(new THREE.TorusGeometry(v[2],.085,8,48),craterRimMaterial);
+   rim.rotation.x=Math.PI/2;rim.position.set(v[0],-2.08,v[1]);surfaceGroup.add(rim);
+ });
+
+ // Angular lunar rocks in the foreground and middle distance.
+ const rockMaterials=[
+   new THREE.MeshStandardMaterial({color:0x77736c,roughness:1}),
+   new THREE.MeshStandardMaterial({color:0x5d5b57,roughness:1}),
+   new THREE.MeshStandardMaterial({color:0x99938a,roughness:1})
+ ];
+ for(let i=0;i<(mobile?34:58);i++){
+   const size=.12+Math.random()*.48;
+   const rock=new THREE.Mesh(new THREE.DodecahedronGeometry(size,0),rockMaterials[i%rockMaterials.length]);
+   const z=3-Math.random()*31,x=(Math.random()-.5)*(z>-8?23:34);
+   rock.position.set(x,-2.02+Math.random()*.08,z);
+   rock.rotation.set(Math.random()*1.2,Math.random()*Math.PI,Math.random()*1.2);
+   rock.scale.set(.8+Math.random()*.8,.55+Math.random()*.75,.75+Math.random()*.8);
+   rock.castShadow=true;rock.receiveShadow=true;surfaceGroup.add(rock);
+ }
+
+ // Load the user's Tripo-generated Apollo 11 Eagle GLB.
+ // The GLB already contains its own face and materials, so no duplicate
+ // procedural eyes or mouth are added here.
+ const eagleRoot=new THREE.Group();
+ eagleRoot.position.set(mobile?.55:1.15,-2.13,-4.8);
+ eagleRoot.rotation.y=mobile?-.05:-.1;
+ surfaceGroup.add(eagleRoot);
+ let eagleLoaded=false;
+ const eagleLoader=new GLTFLoader();
+ eagleLoader.setMeshoptDecoder(MeshoptDecoder);
+ const eagleOptimizedUrl="./assets/models/apollo-11-eagle-descent-stage.meshopt-test.glb";
+ const eagleOriginalUrl="./assets/models/apollo-11-eagle-descent-stage.glb";
+ const onEagleLoaded=(gltf)=>{
+   if(disposed){
+     gltf.scene.traverse(o=>{
+       o.geometry?.dispose();
+       if(o.material)(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>{
+         Object.values(m).forEach(v=>{if(v?.isTexture)v.dispose();});
+         m.dispose();
+       });
+     });
+     return;
+   }
+   const model=gltf.scene;
+   const bounds=new THREE.Box3().setFromObject(model);
+   const center=bounds.getCenter(new THREE.Vector3());
+   const dimensions=bounds.getSize(new THREE.Vector3());
+   // Center the model over its landing point and place its lowest point
+   // on the lunar ground plane. The inspected GLB is Y-up.
+   model.position.x-=center.x;
+   model.position.z-=center.z;
+   model.position.y-=bounds.min.y;
+   const targetHeight=3.35;
+   const scale=targetHeight/Math.max(dimensions.y,.001);
+   eagleRoot.scale.setScalar(scale);
+   model.traverse(object=>{
+     if(!object.isMesh)return;
+     object.castShadow=true;
+     object.receiveShadow=true;
+     if(Array.isArray(object.material)){
+       object.material.forEach(material=>{material.needsUpdate=true;});
+     }else if(object.material){
+       object.material.needsUpdate=true;
+     }
+   });
+   eagleRoot.add(model);
+   eagleLoaded=true;
+   surfaceScene.classList.add("scene3d-ready");
+   surfaceScene.classList.remove("scene3d-failed");
+ };
+ const onEagleProgress=(progress)=>{
+   if(progress.total>0){
+     mount.dataset.eagleLoadProgress=String(Math.round(progress.loaded/progress.total*100));
+   }
+ };
+ eagleLoader.load(
+   eagleOptimizedUrl,
+   onEagleLoaded,
+   onEagleProgress,
+   (optimizedError)=>{
+     console.warn("Meshopt Eagle test model failed; falling back to the original Eagle GLB.",optimizedError);
+     eagleLoader.load(
+       eagleOriginalUrl,
+       onEagleLoaded,
+       onEagleProgress,
+       (originalError)=>{
+         console.error("Both the Meshopt test and original Apollo 11 Eagle GLB failed to load; retaining the original 2D Eagle artwork.",{optimizedError,originalError});
+         surfaceScene.classList.add("scene3d-failed");
+       }
+     );
+   }
+ );
+
+ // CHAPTER 4 — APOLLO LUNAR ROVING VEHICLE
+ // Keep the Eagle and rover in the same lunar world; the rover is loaded
+ // shortly before Chapter 4 enters view to avoid downloading both large GLBs at once.
+ const lrvRoot=new THREE.Group();
+ lrvRoot.position.set(mobile?4.1:5.4,-2.13,-4.8);
+ lrvRoot.rotation.y=mobile?-.18:-.32;
+ lrvRoot.visible=false;
+ surfaceGroup.add(lrvRoot);
+ let lrvLoaded=false;
+ const lrvLoader=new GLTFLoader();
+ lrvLoader.setMeshoptDecoder(MeshoptDecoder);
+ const lrvOptimizedUrl="./assets/models/apollo-lunar-roving-vehicle.meshopt-test.glb";
+ const lrvOriginalUrl="./assets/models/apollo-lunar-roving-vehicle.glb";
+ const loadLrvModel=()=>{
+  if(lrvLoaded||disposed)return;
+  const attachLrvModel=gltf=>{
+   if(disposed){
+    gltf.scene.traverse(o=>{
+     o.geometry?.dispose();
+     if(o.material)(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>{
+      Object.values(m).forEach(v=>{if(v?.isTexture)v.dispose();});
+      m.dispose();
+     });
+    });
+    return;
+   }
+   const model=gltf.scene;
+   const bounds=new THREE.Box3().setFromObject(model);
+   const center=bounds.getCenter(new THREE.Vector3());
+   const dimensions=bounds.getSize(new THREE.Vector3());
+   model.position.x-=center.x;
+   model.position.z-=center.z;
+   model.position.y-=bounds.min.y;
+   const horizontalSpan=Math.max(dimensions.x,dimensions.z);
+   const targetLength=mobile?2.85:4.15;
+   lrvRoot.scale.setScalar(targetLength/Math.max(horizontalSpan,.001));
+   model.traverse(object=>{
+    if(!object.isMesh)return;
+    object.castShadow=true;
+    object.receiveShadow=true;
+    if(Array.isArray(object.material))object.material.forEach(material=>{material.needsUpdate=true;});
+    else if(object.material)object.material.needsUpdate=true;
+   });
+   lrvRoot.add(model);
+   lrvRoot.visible=true;
+   lrvLoaded=true;
+   lrvScene.classList.add("scene3d-ready");
+   lrvScene.classList.remove("scene3d-failed");
+   ScrollTrigger.refresh();
+  };
+  const reportProgress=progress=>{
+   if(progress.total>0)mount.dataset.lrvLoadProgress=String(Math.round(progress.loaded/progress.total*100));
+  };
+  lrvLoader.load(lrvOptimizedUrl,attachLrvModel,reportProgress,error=>{
+   console.warn("Optimized Lunar Roving Vehicle failed to load; trying the original GLB.",error);
+   lrvLoader.load(lrvOriginalUrl,attachLrvModel,reportProgress,fallbackError=>{
+    console.error("Both optimized and original Lunar Roving Vehicle GLBs could not be loaded; retaining the original 2D LRV artwork.",fallbackError);
+    lrvScene.classList.add("scene3d-failed");
+   });
+  });
+ };
+ const lrvLoadTrigger=ScrollTrigger.create({
+   trigger:lrvScene,
+   start:"top 125%",
+   once:true,
+   onEnter:loadLrvModel
+ });
+
+ // CHAPTER 5 — ALSEP SCIENCE STATIONS
+ // Load the station package shortly before Chapter 5; keep the same lunar
+ // ground, star field, lighting and camera used by the previous chapters.
+ const alsepRoot=new THREE.Group();
+ alsepRoot.position.set(mobile?4.8:5.6,-2.13,-4.9);
+ alsepRoot.rotation.y=mobile?-.16:-.24;
+ alsepRoot.visible=false;
+ surfaceGroup.add(alsepRoot);
+ let alsepLoaded=false;
+ const alsepLoader=new GLTFLoader();
+ alsepLoader.setMeshoptDecoder(MeshoptDecoder);
+ const alsepOptimizedUrl="./assets/models/alsep-science-station.meshopt-test.glb";
+ const alsepOriginalUrl="./assets/models/alsep-science-station.glb";
+ const loadAlsepModel=()=>{
+   if(alsepLoaded||disposed)return;
+   const attachAlsepModel=(gltf)=>{
+     if(disposed){
+       gltf.scene.traverse(o=>{
+         o.geometry?.dispose();
+         if(o.material)(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>{
+           Object.values(m).forEach(v=>{if(v?.isTexture)v.dispose();});
+           m.dispose();
+         });
+       });
+       return;
+     }
+     const model=gltf.scene;
+     const bounds=new THREE.Box3().setFromObject(model);
+     const center=bounds.getCenter(new THREE.Vector3());
+     const dimensions=bounds.getSize(new THREE.Vector3());
+     model.position.x-=center.x;
+     model.position.z-=center.z;
+     model.position.y-=bounds.min.y;
+     const horizontalSpan=Math.max(dimensions.x,dimensions.z);
+     const targetLength=mobile?3.25:4.55;
+     alsepRoot.scale.setScalar(targetLength/Math.max(horizontalSpan,.001));
+     model.traverse(object=>{
+       if(!object.isMesh)return;
+       object.castShadow=true;
+       object.receiveShadow=true;
+       if(Array.isArray(object.material)){
+         object.material.forEach(material=>{material.needsUpdate=true;});
+       }else if(object.material){
+         object.material.needsUpdate=true;
+       }
+     });
+     alsepRoot.add(model);
+     alsepRoot.visible=true;
+     alsepLoaded=true;
+     alsepScene.classList.add("scene3d-ready");
+     alsepScene.classList.remove("scene3d-failed");
+     ScrollTrigger.refresh();
+   };
+   const reportAlsepProgress=progress=>{
+     if(progress.total>0){
+       mount.dataset.alsepLoadProgress=String(Math.round(progress.loaded/progress.total*100));
+     }
+   };
+   alsepLoader.load(alsepOptimizedUrl,attachAlsepModel,reportAlsepProgress,error=>{
+     console.warn("Optimized ALSEP Science Station failed to load; trying the original GLB.",error);
+     alsepLoader.load(alsepOriginalUrl,attachAlsepModel,reportAlsepProgress,fallbackError=>{
+       console.error("Both optimized and original ALSEP Science Station GLBs could not be loaded; retaining the original 2D ALSEP artwork.",fallbackError);
+       alsepScene.classList.add("scene3d-failed");
+     });
+   });
+ };
+ const alsepLoadTrigger=ScrollTrigger.create({
+   trigger:alsepScene,
+   start:"top 125%",
+   once:true,
+   onEnter:loadAlsepModel
+ });
+
+ // CHAPTER 6 — SURVEYOR 3
+ // Surveyor 3 shares the continuous lunar surface with Eagle, LRV and ALSEP.
+ const surveyorRoot=new THREE.Group();
+ surveyorRoot.position.set(mobile?4.1:5.0,-2.13,-4.9);
+ surveyorRoot.rotation.y=mobile?-.12:-.2;
+ surveyorRoot.visible=false;
+ surfaceGroup.add(surveyorRoot);
+ let surveyorLoaded=false;
+ const surveyorLoader=new GLTFLoader();
+ surveyorLoader.setMeshoptDecoder(MeshoptDecoder);
+ const surveyorOptimizedUrl="./assets/models/surveyor-3.meshopt-test.glb";
+ const surveyorOriginalUrl="./assets/models/surveyor-3.glb";
+ const loadSurveyorModel=()=>{
+  if(surveyorLoaded||disposed)return;
+  const attachSurveyorModel=gltf=>{
+   if(disposed){
+    gltf.scene.traverse(o=>{
+     o.geometry?.dispose();
+     if(o.material)(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>{
+      Object.values(m).forEach(v=>{if(v?.isTexture)v.dispose();});
+      m.dispose();
+     });
+    });
+    return;
+   }
+   const model=gltf.scene;
+   const bounds=new THREE.Box3().setFromObject(model);
+   const center=bounds.getCenter(new THREE.Vector3());
+   const dimensions=bounds.getSize(new THREE.Vector3());
+   model.position.x-=center.x;
+   model.position.z-=center.z;
+   model.position.y-=bounds.min.y;
+   const horizontalSpan=Math.max(dimensions.x,dimensions.z);
+   const targetLength=mobile?2.8:3.65;
+   surveyorRoot.scale.setScalar(targetLength/Math.max(horizontalSpan,.001));
+   model.traverse(object=>{
+    if(!object.isMesh)return;
+    object.castShadow=true;
+    object.receiveShadow=true;
+    if(Array.isArray(object.material))object.material.forEach(material=>{material.needsUpdate=true;});
+    else if(object.material)object.material.needsUpdate=true;
+   });
+   surveyorRoot.add(model);
+   surveyorRoot.visible=true;
+   surveyorLoaded=true;
+   surveyorScene.classList.add("scene3d-ready");
+   surveyorScene.classList.remove("scene3d-failed");
+   ScrollTrigger.refresh();
+  };
+  const reportProgress=progress=>{
+   if(progress.total>0)mount.dataset.surveyorLoadProgress=String(Math.round(progress.loaded/progress.total*100));
+  };
+  surveyorLoader.load(surveyorOptimizedUrl,attachSurveyorModel,reportProgress,error=>{
+   console.warn("Optimized Surveyor 3 failed to load; trying the original GLB.",error);
+   surveyorLoader.load(surveyorOriginalUrl,attachSurveyorModel,reportProgress,fallbackError=>{
+    console.error("Both optimized and original Surveyor 3 GLBs could not be loaded; retaining the original 2D Surveyor 3 artwork.",fallbackError);
+    surveyorScene.classList.add("scene3d-failed");
+   });
+  });
+ };
+ const surveyorLoadTrigger=ScrollTrigger.create({trigger:surveyorScene,start:"top 125%",once:true,onEnter:loadSurveyorModel});
+
+ // A restrained veil of lunar regolith particles sweeps across the foreground
+ // during the handoff. It is a visual accent, not a simulated atmospheric plume.
+ // CHAPTERS 7–9 — SHARED MARTIAN SURFACE
+ // This red landscape and the shared star field remain continuous behind the Mars rovers.
+ const marsSurfaceGroup=new THREE.Group();marsSurfaceGroup.scale.setScalar(.001);scene.add(marsSurfaceGroup);
+ const marsGroundCanvas=document.createElement("canvas");marsGroundCanvas.width=512;marsGroundCanvas.height=512;
+ const marsGroundCtx=marsGroundCanvas.getContext("2d"),marsGroundBase=marsGroundCtx.createLinearGradient(0,0,512,512);
+ marsGroundBase.addColorStop(0,"#9b513b");marsGroundBase.addColorStop(.48,"#783b2e");marsGroundBase.addColorStop(1,"#b66b4c");marsGroundCtx.fillStyle=marsGroundBase;marsGroundCtx.fillRect(0,0,512,512);
+ for(let i=0;i<11500;i++){const x=Math.random()*512,y=Math.random()*512,r=.4+Math.random()*2.3,shade=75+Math.floor(Math.random()*105);marsGroundCtx.fillStyle="rgba("+shade+","+Math.floor(shade*.56)+","+Math.floor(shade*.43)+","+(Math.random()*.24)+")";marsGroundCtx.beginPath();marsGroundCtx.arc(x,y,r,0,Math.PI*2);marsGroundCtx.fill();}
+ for(let i=0;i<105;i++){const x=Math.random()*512,y=Math.random()*512,r=2+Math.random()*15;marsGroundCtx.strokeStyle="rgba(48,25,21,.24)";marsGroundCtx.lineWidth=1+Math.random()*2;marsGroundCtx.beginPath();marsGroundCtx.arc(x,y,r,0,Math.PI*2);marsGroundCtx.stroke();}
+ const marsGroundTexture=new THREE.CanvasTexture(marsGroundCanvas);marsGroundTexture.colorSpace=THREE.SRGBColorSpace;marsGroundTexture.wrapS=THREE.RepeatWrapping;marsGroundTexture.wrapT=THREE.RepeatWrapping;marsGroundTexture.repeat.set(18,18);marsGroundTexture.anisotropy=Math.min(renderer.capabilities.getMaxAnisotropy(),4);
+ const marsGroundGeometry=new THREE.PlaneGeometry(180,180,90,90),marsGroundPositions=marsGroundGeometry.attributes.position;
+ for(let i=0;i<marsGroundPositions.count;i++){const x=marsGroundPositions.getX(i),z=marsGroundPositions.getY(i);marsGroundPositions.setZ(i,Math.sin(x*.13)*.065+Math.cos(z*.16)*.05+Math.sin((x+z)*.07)*.04);}
+ marsGroundGeometry.computeVertexNormals();marsGroundGeometry.rotateX(-Math.PI/2);
+ const marsGround=new THREE.Mesh(marsGroundGeometry,new THREE.MeshStandardMaterial({map:marsGroundTexture,color:0xc17a59,roughness:1,metalness:0}));marsGround.position.set(0,-2.15,-34);marsGround.receiveShadow=true;marsSurfaceGroup.add(marsGround);
+ const marsRidgeMaterials=[new THREE.MeshStandardMaterial({color:0x542b25,roughness:1}),new THREE.MeshStandardMaterial({color:0x7c4030,roughness:1}),new THREE.MeshStandardMaterial({color:0x98543d,roughness:1})],marsHillGeometry=new THREE.SphereGeometry(1,32,20);
+ [[-25,-1.42,-50,19,2.5,9],[0,-1.5,-55,23,3.1,10],[24,-1.4,-52,19,2.4,9],[43,-1.5,-61,24,3.2,11]].forEach((v,i)=>{const hill=new THREE.Mesh(marsHillGeometry,marsRidgeMaterials[i%marsRidgeMaterials.length]);hill.position.set(v[0],v[1],v[2]);hill.scale.set(v[3],v[4],v[5]);hill.receiveShadow=true;marsSurfaceGroup.add(hill);});
+ const marsRockMaterials=[new THREE.MeshStandardMaterial({color:0x74402f,roughness:1}),new THREE.MeshStandardMaterial({color:0x9b5940,roughness:1}),new THREE.MeshStandardMaterial({color:0x63352b,roughness:1})];
+ for(let i=0;i<(mobile?38:64);i++){const size=.12+Math.random()*.52,rock=new THREE.Mesh(new THREE.DodecahedronGeometry(size,0),marsRockMaterials[i%marsRockMaterials.length]),z=3-Math.random()*32,x=(Math.random()-.5)*(z>-8?23:36);rock.position.set(x,-2.02+Math.random()*.09,z);rock.rotation.set(Math.random()*1.2,Math.random()*Math.PI,Math.random()*1.2);rock.scale.set(.8+Math.random()*.8,.5+Math.random()*.75,.75+Math.random()*.8);rock.castShadow=true;rock.receiveShadow=true;marsSurfaceGroup.add(rock);}
+
+ // Load Opportunity shortly before Chapter 7 enters view; retain its original artwork as fallback.
+ const opportunityRoot=new THREE.Group();opportunityRoot.position.set(mobile?-.2:-.65,-2.13,-4.9);opportunityRoot.rotation.y=mobile?-.08:-.16;opportunityRoot.visible=false;marsSurfaceGroup.add(opportunityRoot);
+ let opportunityLoaded=false;
+ const opportunityLoader=new GLTFLoader();
+ opportunityLoader.setMeshoptDecoder(MeshoptDecoder);
+ const opportunityOptimizedUrl="./assets/models/opportunity-rover.meshopt-test.glb";
+ const opportunityOriginalUrl="./assets/models/opportunity-rover.glb";
+ const loadOpportunityModel=()=>{
+  if(opportunityLoaded||disposed)return;
+  const attachOpportunityModel=gltf=>{
+   if(disposed){
+    gltf.scene.traverse(o=>{
+     o.geometry?.dispose();
+     if(o.material)(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>{
+      Object.values(m).forEach(v=>{if(v?.isTexture)v.dispose();});
+      m.dispose();
+     });
+    });
+    return;
+   }
+   const model=gltf.scene;
+   const bounds=new THREE.Box3().setFromObject(model);
+   const center=bounds.getCenter(new THREE.Vector3());
+   const dimensions=bounds.getSize(new THREE.Vector3());
+   model.position.x-=center.x;
+   model.position.z-=center.z;
+   model.position.y-=bounds.min.y;
+   const horizontalSpan=Math.max(dimensions.x,dimensions.z);
+   const targetLength=mobile?3.15:4.05;
+   opportunityRoot.scale.setScalar(targetLength/Math.max(horizontalSpan,.001));
+   model.traverse(object=>{
+    if(!object.isMesh)return;
+    object.castShadow=true;
+    object.receiveShadow=true;
+    if(Array.isArray(object.material))object.material.forEach(material=>{material.needsUpdate=true;});
+    else if(object.material)object.material.needsUpdate=true;
+   });
+   opportunityRoot.add(model);
+   opportunityRoot.visible=true;
+   opportunityLoaded=true;
+   opportunityScene.classList.add("scene3d-ready");
+   opportunityScene.classList.remove("scene3d-failed");
+   ScrollTrigger.refresh();
+  };
+  const reportProgress=progress=>{
+   if(progress.total>0)mount.dataset.opportunityLoadProgress=String(Math.round(progress.loaded/progress.total*100));
+  };
+  opportunityLoader.load(opportunityOptimizedUrl,attachOpportunityModel,reportProgress,error=>{
+   console.warn("Optimized Opportunity Rover failed to load; trying the original GLB.",error);
+   opportunityLoader.load(opportunityOriginalUrl,attachOpportunityModel,reportProgress,fallbackError=>{
+    console.error("Both optimized and original Opportunity Rover GLBs could not be loaded; retaining the original 2D Opportunity artwork.",fallbackError);
+    opportunityScene.classList.add("scene3d-failed");
+   });
+  });
+ };
+ const opportunityLoadTrigger=ScrollTrigger.create({trigger:opportunityScene,start:"top 125%",once:true,onEnter:loadOpportunityModel});
+
+ // CHAPTER 8 — add Spirit beside Opportunity in the same Martian landscape.
+ // Opportunity remains in the shared scene; Spirit joins as a second rover.
+ const spiritRoot=new THREE.Group();
+ spiritRoot.position.set(mobile?3.8:4.2,-2.13,-5.05);
+ spiritRoot.rotation.y=mobile?-.12:-.18;
+ spiritRoot.visible=false;
+ marsSurfaceGroup.add(spiritRoot);
+ let spiritLoaded=false;
+ const spiritLoader=new GLTFLoader();
+ spiritLoader.setMeshoptDecoder(MeshoptDecoder);
+ const spiritOptimizedUrl="./assets/models/spirit-rover.meshopt-test.glb";
+ const spiritOriginalUrl="./assets/models/spirit-rover.glb";
+ const loadSpiritModel=()=>{
+  if(spiritLoaded||disposed)return;
+  const attachSpiritModel=gltf=>{
+   if(disposed){
+    gltf.scene.traverse(o=>{
+     o.geometry?.dispose();
+     if(o.material)(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>{
+      Object.values(m).forEach(v=>{if(v?.isTexture)v.dispose();});
+      m.dispose();
+     });
+    });
+    return;
+   }
+   const model=gltf.scene;
+   const bounds=new THREE.Box3().setFromObject(model);
+   const center=bounds.getCenter(new THREE.Vector3());
+   const dimensions=bounds.getSize(new THREE.Vector3());
+   model.position.x-=center.x;
+   model.position.z-=center.z;
+   model.position.y-=bounds.min.y;
+   const horizontalSpan=Math.max(dimensions.x,dimensions.z);
+   const targetLength=mobile?2.45:3.05;
+   spiritRoot.scale.setScalar(targetLength/Math.max(horizontalSpan,.001));
+   model.traverse(object=>{
+    if(!object.isMesh)return;
+    object.castShadow=true;
+    object.receiveShadow=true;
+    if(Array.isArray(object.material))object.material.forEach(material=>{material.needsUpdate=true;});
+    else if(object.material)object.material.needsUpdate=true;
+   });
+   spiritRoot.add(model);
+   // The parent group starts hidden so Spirit stays absent until its GLB is ready.
+   // Explicitly reveal it now that the model has loaded successfully.
+   spiritRoot.visible=true;
+   spiritLoaded=true;
+   spiritScene.classList.add("scene3d-ready");
+   spiritScene.classList.remove("scene3d-failed");
+   ScrollTrigger.refresh();
+  };
+  const reportProgress=progress=>{
+   if(progress.total>0)mount.dataset.spiritLoadProgress=String(Math.round(progress.loaded/progress.total*100));
+  };
+  spiritLoader.load(spiritOptimizedUrl,attachSpiritModel,reportProgress,error=>{
+   console.warn("Optimized Spirit Rover failed to load; trying the original GLB.",error);
+   spiritLoader.load(spiritOriginalUrl,attachSpiritModel,reportProgress,fallbackError=>{
+    console.error("Both optimized and original Spirit Rover GLBs could not be loaded; retaining the original 2D Spirit artwork.",fallbackError);
+    spiritScene.classList.add("scene3d-failed");
+   });
+  });
+ };
+ const spiritLoadTrigger=ScrollTrigger.create({trigger:spiritScene,start:"top 125%",once:true,onEnter:loadSpiritModel});
+
+ // CHAPTER 9 — add the InSight lander beside both Mars rovers.
+ // Opportunity and Spirit remain in the shared landscape; InSight joins as a third explorer.
+ const insightRoot=new THREE.Group();
+ insightRoot.position.set(mobile?5.2:6.2,-2.13,-5.25);
+ insightRoot.rotation.y=mobile?-.08:-.12;
+ insightRoot.visible=false;
+ marsSurfaceGroup.add(insightRoot);
+ let insightLoaded=false;
+ const insightLoader=new GLTFLoader();
+ insightLoader.setMeshoptDecoder(MeshoptDecoder);
+ const insightOptimizedUrl="./assets/models/insight-lander.meshopt-test.glb";
+ const insightOriginalUrl="./assets/models/insight-lander.glb";
+ const loadInsightModel=()=>{
+  if(insightLoaded||disposed)return;
+  const attachInsightModel=gltf=>{
+   if(disposed){
+    gltf.scene.traverse(o=>{
+     o.geometry?.dispose();
+     if(o.material)(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>{
+      Object.values(m).forEach(v=>{if(v?.isTexture)v.dispose();});
+      m.dispose();
+     });
+    });
+    return;
+   }
+   const model=gltf.scene;
+   const bounds=new THREE.Box3().setFromObject(model);
+   const center=bounds.getCenter(new THREE.Vector3());
+   const dimensions=bounds.getSize(new THREE.Vector3());
+   model.position.x-=center.x;
+   model.position.z-=center.z;
+   model.position.y-=bounds.min.y;
+   const horizontalSpan=Math.max(dimensions.x,dimensions.z);
+   const targetLength=mobile?1.9:2.45;
+   insightRoot.scale.setScalar(targetLength/Math.max(horizontalSpan,.001));
+   model.traverse(object=>{
+    if(!object.isMesh)return;
+    object.castShadow=true;
+    object.receiveShadow=true;
+    if(Array.isArray(object.material))object.material.forEach(material=>{material.needsUpdate=true;});
+    else if(object.material)object.material.needsUpdate=true;
+   });
+   insightRoot.add(model);
+   // Keep the parent hidden until the GLB is fully loaded, then reveal it explicitly.
+   insightRoot.visible=true;
+   insightLoaded=true;
+   insightScene.classList.add("scene3d-ready");
+   insightScene.classList.remove("scene3d-failed");
+   ScrollTrigger.refresh();
+  };
+  const reportProgress=progress=>{
+   if(progress.total>0)mount.dataset.insightLoadProgress=String(Math.round(progress.loaded/progress.total*100));
+  };
+  insightLoader.load(insightOptimizedUrl,attachInsightModel,reportProgress,error=>{
+   console.warn("Optimized InSight lander failed to load; trying the original GLB.",error);
+   insightLoader.load(insightOriginalUrl,attachInsightModel,reportProgress,fallbackError=>{
+    console.error("Both optimized and original InSight lander GLBs could not be loaded; retaining the original 2D InSight artwork.",fallbackError);
+    insightScene.classList.add("scene3d-failed");
+   });
+  });
+ };
+ const insightLoadTrigger=ScrollTrigger.create({trigger:insightScene,start:"top 125%",once:true,onEnter:loadInsightModel});
+
+ // CHAPTER 11 — MARS PATHFINDER + SOJOURNER
+ // One combined GLB represents the lander and the rover it carried.
+ const pathfinderRoot=new THREE.Group();
+ pathfinderRoot.position.set(mobile?4.7:5.5,-2.13,-5.0);
+ pathfinderRoot.rotation.y=mobile?-.08:-.14;
+ pathfinderRoot.visible=false;
+ marsSurfaceGroup.add(pathfinderRoot);
+ let pathfinderLoaded=false;
+ const pathfinderLoader=new GLTFLoader();
+ pathfinderLoader.setMeshoptDecoder(MeshoptDecoder);
+ const pathfinderOptimizedUrl="./assets/models/mars-pathfinder-sojourner.meshopt-test.glb";
+ const pathfinderOriginalUrl="./assets/models/mars-pathfinder-sojourner.glb";
+ const loadPathfinderModel=()=>{
+  if(pathfinderLoaded||disposed)return;
+  const attachPathfinderModel=gltf=>{
+   if(disposed){
+    gltf.scene.traverse(o=>{
+     o.geometry?.dispose();
+     if(o.material)(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>{
+      Object.values(m).forEach(v=>{if(v?.isTexture)v.dispose();});
+      m.dispose();
+     });
+    });
+    return;
+   }
+   const model=gltf.scene;
+   const bounds=new THREE.Box3().setFromObject(model);
+   const center=bounds.getCenter(new THREE.Vector3());
+   const dimensions=bounds.getSize(new THREE.Vector3());
+   model.position.x-=center.x;
+   model.position.z-=center.z;
+   model.position.y-=bounds.min.y;
+   const horizontalSpan=Math.max(dimensions.x,dimensions.z);
+   const targetLength=mobile?3.15:4.0;
+   pathfinderRoot.scale.setScalar(targetLength/Math.max(horizontalSpan,.001));
+   model.traverse(object=>{
+    if(!object.isMesh)return;
+    object.castShadow=true;
+    object.receiveShadow=true;
+    if(Array.isArray(object.material))object.material.forEach(material=>{material.needsUpdate=true;});
+    else if(object.material)object.material.needsUpdate=true;
+   });
+   pathfinderRoot.add(model);
+   pathfinderRoot.visible=true;
+   pathfinderLoaded=true;
+   pathfinderScene.classList.add("scene3d-ready");
+   pathfinderScene.classList.remove("scene3d-failed");
+   ScrollTrigger.refresh();
+  };
+  const reportProgress=progress=>{
+   if(progress.total>0)mount.dataset.pathfinderLoadProgress=String(Math.round(progress.loaded/progress.total*100));
+  };
+  pathfinderLoader.load(pathfinderOptimizedUrl,attachPathfinderModel,reportProgress,error=>{
+   console.warn("Optimized Pathfinder + Sojourner model failed to load; trying the original GLB.",error);
+   pathfinderLoader.load(pathfinderOriginalUrl,attachPathfinderModel,reportProgress,fallbackError=>{
+    console.error("Both optimized and original Pathfinder + Sojourner GLBs could not be loaded; retaining the original 2D combined artwork.",fallbackError);
+    pathfinderScene.classList.add("scene3d-failed");
+   });
+  });
+ };
+ const pathfinderLoadTrigger=ScrollTrigger.create({trigger:pathfinderScene,start:"top 125%",once:true,onEnter:loadPathfinderModel});
+
+ const dustCount=mobile?110:190;
+ const dustPositions=new Float32Array(dustCount*3);
+ for(let i=0;i<dustCount;i++){
+   dustPositions[i*3]=(Math.random()-.5)*5.4;
+   dustPositions[i*3+1]=(Math.random()-.5)*.7;
+   dustPositions[i*3+2]=-2.8+Math.random()*3.2;
+ }
+ const dustGeometry=new THREE.BufferGeometry();
+ dustGeometry.setAttribute("position",new THREE.BufferAttribute(dustPositions,3));
+ const dustMaterial=new THREE.PointsMaterial({
+   color:0xc8b99d,size:mobile?.045:.055,transparent:true,opacity:0,
+   depthWrite:false,blending:THREE.AdditiveBlending
+ });
+ const dustSweep=new THREE.Group();
+ dustSweep.position.set(-5.2,-1.72,0);
+ dustSweep.add(new THREE.Points(dustGeometry,dustMaterial));
+ surfaceGroup.add(dustSweep);
+
+ const lunarSun=new THREE.DirectionalLight(0xffe0b5,2.1);
+ lunarSun.position.set(-8,11,7);lunarSun.castShadow=true;
+ lunarSun.shadow.mapSize.set(1024,1024);
+ lunarSun.shadow.camera.left=-30;lunarSun.shadow.camera.right=30;
+ lunarSun.shadow.camera.top=30;lunarSun.shadow.camera.bottom=-30;
+ scene.add(lunarSun);
+
+ // One scrubbed timeline spans Chapter 1 and Chapter 2, so the camera,
+ // Earth, Moon and bus remain in the same world during the transition.
+ // Chapter 2 is now 125svh while Chapter 1 remains 100svh. These
+ // normalized positions keep the Moonbound flight beginning exactly
+ // at the Chapter 2 boundary and distribute its motion across the
+ // chapter's longer scroll distance.
+ const journey=gsap.timeline({
+  scrollTrigger:{
+   trigger:landingScene,start:"top top",endTrigger:travelScene,end:"bottom top",
+   scrub:1.15,invalidateOnRefresh:true
+  },
+  onUpdate:()=>{
+   // The Earth and Moon belong to the opening journey; restore them when
+   // scrolling back from the later chapters.
+   earthGroup.visible=true;
+   moonGroup.visible=true;
+   bus.visible=true;
+  }
+ });
+ journey
+   .to(camera.position,{x:mobile?0:.18,y:mobile?.08:.1,z:7.75,duration:1},0)
+   .to(earthGroup.position,{x:()=>isPortrait() ? -1.15 : isNarrow() ? -4.1 : -6.25,y:mobile?1.25:1.05,duration:4/9},0)
+   .to(earthGroup.scale,{x:.22,y:.22,z:.22,duration:4/9},0)
+   // The Moon is distant at the exact beginning of Chapter 2.
+   .to(moonGroup.position,{x:()=>isPortrait() ? .75 : isNarrow() ? .75 : 4.45,y:mobile?1.55:.5,z:-2.45,duration:1/9},4/9)
+   .to(moonGroup.scale,{x:.17,y:.17,z:.17,duration:1/9},4/9)
+   // Its approach and growth unfold across the extended Moonbound chapter.
+   .to(moonGroup.position,{x:()=>isPortrait() ? .1 : isNarrow() ? .1 : 2.65,y:mobile?1.25:.28,z:-1.75,duration:4/9},5/9)
+   .to(moonGroup.scale,{x:mobile?1.12:1.34,y:mobile?1.12:1.34,z:mobile?1.12:1.34,duration:4/9},5/9)
+   .to(bus.position,{x:mobile?.3:1.65,y:mobile?-1.22:-1.25,z:1.05,duration:2/9},4/9)
+   .to(bus.rotation,{y:-.27,z:-.065,duration:2/9},4/9)
+   .to(bus.position,{x:mobile?-.25:.2,y:mobile?-.72:-.76,z:.62,duration:2/9},2/3)
+   .to(bus.rotation,{y:-.43,z:.075,duration:2/9},2/3)
+   .to(bus.position,{x:mobile?.18:1.05,y:mobile?-1.18:-1.16,z:.9,duration:1/9},8/9)
+   .to(bus.rotation,{y:-.3,z:-.025,duration:1/9},8/9);
+
+ // Chapter 3 landing: transition from the close Moon to a grounded POV.
+ const arrival=gsap.timeline({scrollTrigger:{
+   trigger:surfaceScene,start:"top top",end:"bottom top",
+   scrub:1.05,invalidateOnRefresh:true
+ }});
+ arrival
+   .to(moonGroup.position,{x:()=>isPortrait() ? -.4 : isNarrow() ? -.4 : 2.8,y:-6.5,z:-4.5,duration:.42},0)
+   .to(moonGroup.scale,{x:.001,y:.001,z:.001,duration:.42},0)
+   .to(bus.scale,{x:.001,y:.001,z:.001,duration:.2},0)
+   .to(surfaceGroup.scale,{x:1,y:1,z:1,duration:.48},.08)
+   .to(camera.position,{x:mobile?-.05:-.32,y:mobile?1.48:1.58,z:mobile?8.15:8.35,duration:.58},.04)
+   .to(camera.rotation,{x:-.105,y:0,z:0,duration:.58},.04);
+
+ // Chapter 4 — one continuous, scroll-scrubbed Eagle-to-LRV handoff.
+ // The lunar ground, star field, lighting and renderer remain untouched.
+ const roverHandoff=gsap.timeline({scrollTrigger:{
+   trigger:lrvScene,start:"top top",end:()=>isPortrait() ? "bottom 38%" : "bottom top",
+   scrub:1.05,invalidateOnRefresh:true
+ }});
+ roverHandoff
+   .to(eagleRoot.position,{x:()=>isPortrait() ? -3.05 : isNarrow() ? -3.05 : -4.15,y:-2.13,z:-7.5,duration:1},0)
+   .to(lrvRoot.position,{x:()=>isPortrait() ? -1.05 : isNarrow() ? -1.05 : -1.45,y:-2.13,z:-4.55,duration:1},0)
+   .to(camera.position,{x:mobile?-.28:.22,y:mobile?1.55:1.64,z:mobile?8.1:8.0,duration:1},0)
+   .to(camera.rotation,{x:-.115,y:mobile?-.012:.018,z:0,duration:1},0)
+   .fromTo(dustSweep.position,{x:-5.2},{x:5.2,duration:.72,ease:"none"},.12)
+   .fromTo(dustMaterial,{opacity:0},{opacity:mobile?.17:.22,duration:.2},.15)
+   .to(dustMaterial,{opacity:0,duration:.34},.58);
+
+ // Chapter 5 — hand off the rover to the ALSEP science station package.
+ // No new environment is created: the lunar surface and sky remain continuous.
+ const scienceHandoff=gsap.timeline({scrollTrigger:{
+   trigger:alsepScene,start:"top top",end:"bottom top",
+   scrub:1.05,invalidateOnRefresh:true
+ }});
+ scienceHandoff
+   .to(lrvRoot.position,{x:mobile?-4.2:-5.2,y:-2.13,z:-7.6,duration:1},0)
+   .to(alsepRoot.position,{x:mobile?.85:1.2,y:-2.13,z:-4.7,duration:1},0)
+   .to(camera.position,{x:mobile?-.05:-.3,y:mobile?1.48:1.58,z:mobile?8.15:8.35,duration:1},0)
+   .to(camera.rotation,{x:-.105,y:0,z:0,duration:1},0)
+   .fromTo(dustSweep.position,{x:-5.2},{x:5.2,duration:.72,ease:"none"},.12)
+   .fromTo(dustMaterial,{opacity:0},{opacity:mobile?.15:.2,duration:.2},.15)
+   .to(dustMaterial,{opacity:0,duration:.34},.58);
+
+ // Chapter 6 — move from ALSEP to Surveyor 3 in the same lunar environment.
+ const surveyorHandoff=gsap.timeline({scrollTrigger:{
+   trigger:surveyorScene,start:"top top",end:"bottom top",scrub:1.05,invalidateOnRefresh:true
+ }});
+ surveyorHandoff
+   .to(alsepRoot.position,{x:mobile?-4.3:-5.0,y:-2.13,z:-7.5,duration:1},0)
+   .to(surveyorRoot.position,{x:mobile?.65:1.0,y:-2.13,z:-4.65,duration:1},0)
+   .to(camera.position,{x:mobile?-.05:-.25,y:mobile?1.48:1.58,z:mobile?8.15:8.35,duration:1},0)
+   .to(camera.rotation,{x:-.105,y:0,z:0,duration:1},0)
+   .fromTo(dustSweep.position,{x:-5.2},{x:5.2,duration:.72,ease:"none"},.12)
+   .fromTo(dustMaterial,{opacity:0},{opacity:mobile?.15:.2,duration:.2},.15)
+   .to(dustMaterial,{opacity:0,duration:.34},.58);
+
+ // CHAPTER 8 — arrive on Mars and settle into the rover's surface-level story.
+ // Keep the shared star field; transition from the distant globe to the Martian landscape.
+ const opportunityArrival=gsap.timeline({
+  scrollTrigger:{trigger:opportunityScene,start:"top top",end:"bottom top",scrub:1.05,invalidateOnRefresh:true},
+  onUpdate:()=>{
+    // During landing, keep the transport globes out of the surface scene.
+    earthGroup.visible=false;
+    moonGroup.visible=false;
+    bus.visible=opportunityArrival.progress()<.22;
+    // Keep the distant Mars globe visible during the approach, then remove it
+    // completely once the landing transition has finished. Reverse scrolling restores it.
+    marsGroup.visible=opportunityArrival.progress()<.38;
+  }
+ });
+ opportunityArrival
+  .to(marsGroup.position,{x:mobile?5.8:7.2,y:4.2,z:-8,duration:.38},0)
+  .to(marsGroup.scale,{x:.001,y:.001,z:.001,duration:.38},0)
+  .to(bus.scale,{x:.001,y:.001,z:.001,duration:.22},0)
+  .to(marsSurfaceGroup.scale,{x:1,y:1,z:1,duration:.58},.08)
+  .to(camera.position,{x:mobile?-.12:-.28,y:mobile?1.5:1.58,z:mobile?8.2:8.35,duration:.62},.04)
+  .to(camera.rotation,{x:-.105,y:0,z:0,duration:.62},.04)
+  .to(opportunityRoot.position,{x:mobile?-.2:-.65,y:-2.13,z:-4.9,duration:.62},.12);
+
+ // Chapter 8 keeps the Mars world and Opportunity in view, then brings Spirit alongside.
+ const spiritArrival=gsap.timeline({
+  scrollTrigger:{trigger:spiritScene,start:"top top",end:"bottom top",scrub:1.05,invalidateOnRefresh:true},
+  onUpdate:()=>{
+   // Chapters 8–9 show only the Martian surface, sky and landed hardware.
+   bus.visible=false;
+   earthGroup.visible=false;
+   moonGroup.visible=false;
+   marsGroup.visible=false;
+  }
+ });
+ spiritArrival
+  .to(opportunityRoot.position,{x:mobile?-1.05:-1.55,y:-2.13,z:-4.9,duration:.72},0)
+  .to(spiritRoot.position,{x:mobile?1.15:1.65,y:-2.13,z:-5.05,duration:.72},0)
+  .to(camera.position,{x:mobile?-.05:-.12,y:mobile?1.5:1.58,z:mobile?8.2:8.35,duration:.72},0)
+  .to(camera.rotation,{x:-.105,y:0,z:0,duration:.72},0);
+
+ // Chapter 9 — keep both rovers in view while InSight joins the Martian scene.
+ const insightArrival=gsap.timeline({
+  scrollTrigger:{trigger:insightScene,start:"top top",end:"bottom top",scrub:1.05,invalidateOnRefresh:true},
+  onUpdate:()=>{
+   // Reassert the clean Martian-surface composition throughout Chapter 9.
+   bus.visible=false;
+   earthGroup.visible=false;
+   moonGroup.visible=false;
+   marsGroup.visible=false;
+  }
+ });
+ insightArrival
+  .to(opportunityRoot.position,{x:()=>isPortrait() ? -1.65 : isNarrow() ? -2.0 : -2.45,y:-2.13,z:-4.9,duration:.72},0)
+  .to(spiritRoot.position,{x:()=>isPortrait() ? 0 : isNarrow() ? -.15 : .15,y:-2.13,z:-5.05,duration:.72},0)
+  .to(insightRoot.position,{x:()=>isPortrait() ? 1.65 : isNarrow() ? 2.25 : 2.85,y:-2.13,z:-5.25,duration:.72},0)
+  .to(camera.position,{x:mobile?-.05:-.08,y:mobile?1.5:1.58,z:mobile?8.2:8.35,duration:.72},0)
+  .to(camera.rotation,{x:-.105,y:0,z:0,duration:.72},0);
+
+ // CHAPTER 11 — let Pathfinder and Sojourner take the foreground together.
+ const pathfinderArrival=gsap.timeline({
+  scrollTrigger:{trigger:pathfinderScene,start:"top top",end:"bottom top",scrub:1.05,invalidateOnRefresh:true},
+  onUpdate:()=>{
+   bus.visible=false;
+   earthGroup.visible=false;
+   moonGroup.visible=false;
+   marsGroup.visible=false;
+  }
+ });
+ pathfinderArrival
+  .to(opportunityRoot.position,{x:mobile?-5.2:-6.0,y:-2.13,z:-8.0,duration:.72},0)
+  .to(spiritRoot.position,{x:mobile?-4.8:-5.5,y:-2.13,z:-8.2,duration:.72},0)
+  .to(insightRoot.position,{x:mobile?5.0:5.8,y:-2.13,z:-8.1,duration:.72},0)
+  .to(pathfinderRoot.position,{x:mobile?-.05:-.15,y:-2.13,z:-4.75,duration:.72},0)
+  .to(camera.position,{x:mobile?-.05:-.08,y:mobile?1.5:1.58,z:mobile?8.2:8.35,duration:.72},0)
+  .to(camera.rotation,{x:-.105,y:0,z:0,duration:.72},0);
+
+ // KEPLER SPACE TELESCOPE — a brief encounter during the journey home.
+ // Load the optimized GLB first and retain the original as a fallback.
+ const keplerRoot=new THREE.Group();
+ const keplerTargetX=mobile?2.55:4.25;
+ const keplerTargetY=mobile?2.15:2.7;
+ keplerRoot.position.set(mobile?4.1:6.1,keplerTargetY+.18,-3.65);
+ keplerRoot.visible=false;
+ keplerRoot.scale.setScalar(.001);
+ scene.add(keplerRoot);
+ let keplerLoaded=false;
+ const keplerLoader=new GLTFLoader();
+ keplerLoader.setMeshoptDecoder(MeshoptDecoder);
+ const keplerOptimizedUrl="./assets/models/kepler-space-telescope.meshopt-test.glb";
+ const keplerOriginalUrl="./assets/models/kepler-space-telescope.glb";
+ const loadKeplerModel=()=>{
+  if(keplerLoaded||disposed)return;
+  const attachKeplerModel=gltf=>{
+   if(disposed){
+    gltf.scene.traverse(o=>{
+     o.geometry?.dispose();
+     if(o.material)(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>{
+      Object.values(m).forEach(v=>{if(v?.isTexture)v.dispose();});
+      m.dispose();
+     });
+    });
+    return;
+   }
+   const model=gltf.scene;
+   const bounds=new THREE.Box3().setFromObject(model);
+   const center=bounds.getCenter(new THREE.Vector3());
+   const dimensions=bounds.getSize(new THREE.Vector3());
+   model.position.x-=center.x;
+   model.position.y-=center.y;
+   model.position.z-=center.z;
+   const horizontalSpan=Math.max(dimensions.x,dimensions.z);
+   const targetLength=mobile?1.18:1.72;
+   model.scale.setScalar(targetLength/Math.max(horizontalSpan,.001));
+   model.traverse(object=>{
+    if(!object.isMesh)return;
+    object.castShadow=true;
+    object.receiveShadow=true;
+    if(Array.isArray(object.material))object.material.forEach(material=>{material.needsUpdate=true;});
+    else if(object.material)object.material.needsUpdate=true;
+   });
+   keplerRoot.add(model);
+   keplerLoaded=true;
+   ScrollTrigger.refresh();
+  };
+  const reportProgress=progress=>{
+   if(progress.total>0)mount.dataset.keplerLoadProgress=String(Math.round(progress.loaded/progress.total*100));
+  };
+  keplerLoader.load(keplerOptimizedUrl,attachKeplerModel,reportProgress,error=>{
+   console.warn("Optimized Kepler Space Telescope model failed to load; trying the original GLB.",error);
+   keplerLoader.load(keplerOriginalUrl,attachKeplerModel,reportProgress,fallbackError=>{
+    console.error("Both optimized and original Kepler Space Telescope GLBs could not be loaded.",fallbackError);
+   });
+  });
+ };
+ const keplerLoadTrigger=ScrollTrigger.create({
+  trigger:returnScene,start:"top 125%",once:true,onEnter:loadKeplerModel
+ });
+
+ // CHAPTER 12 — pull back from Mars and begin the journey home.
+ // Reuse the same 3D bus, starfield and procedural Earth from Chapters 1–2.
+ // The Mars landscape and all three explorers recede as the camera returns to space.
+ const returnJourney=gsap.timeline({
+  scrollTrigger:{trigger:returnScene,start:"top top",end:"bottom top",scrub:1.15,invalidateOnRefresh:true},
+  onUpdate:()=>{
+   const progress=returnJourney.progress();
+   const returning=progress>0;
+   bus.visible=returning;
+   earthGroup.visible=returning;
+   keplerRoot.visible=keplerLoaded&&progress>.18;
+   moonGroup.visible=false;
+   marsGroup.visible=false;
+  }
+ });
+ returnJourney
+  .to(camera.position,{x:0,y:0,z:11.6,duration:.34},0)
+  .to(camera.rotation,{x:0,y:0,z:0,duration:.34},0)
+  .to(marsSurfaceGroup.scale,{x:.001,y:.001,z:.001,duration:.34},0)
+  .to(marsGroup.scale,{x:.001,y:.001,z:.001,duration:.28},0)
+  .to(earthGroup.position,{x:mobile?2.35:3.45,y:mobile?.15:.1,z:-3.5,duration:.72},.12)
+  .to(earthGroup.scale,{x:mobile?.68:.92,y:mobile?.68:.92,z:mobile?.68:.92,duration:.72},.12)
+  .to(keplerRoot.position,{x:keplerTargetX,y:keplerTargetY,z:-3.65,duration:.48,ease:"power2.out"},.22)
+  .to(keplerRoot.scale,{x:1,y:1,z:1,duration:.34,ease:"power2.out"},.22)
+  .to(keplerRoot.rotation,{y:mobile?-.18:-.28,z:.025,duration:.62},.22)
+  .to(bus.position,{x:mobile?.65:.9,y:mobile?.22:.28,z:.45,duration:.9,ease:"none"},0)
+  .to(bus.scale,{x:mobile?.56:.68,y:mobile?.56:.68,z:mobile?.56:.68,duration:.48},0)
+  .to(bus.rotation,{x:0,y:-.12,z:-.015,duration:.82},.08)
+  .to(camera.position,{x:mobile?.12:.2,y:mobile?-.05:.02,z:mobile?10.7:10.9,duration:.42},.58);
+
+ // CHAPTER 11 — zoom through Earth's globe into the daytime homecoming landscape.
+ const finalJourney=gsap.timeline({
+  scrollTrigger:{
+   trigger:finalScene,start:"top bottom",end:"top top",scrub:1.1,invalidateOnRefresh:true
+  },
+  onUpdate:()=>{
+   const progress=finalJourney.progress();
+   if(progress>.55)busFloat?.pause();
+   else if(!reduced)busFloat?.resume();
+   if(progress>.52)keplerRoot.visible=false;
+   else keplerRoot.visible=keplerLoaded&&returnJourney.progress()>.18;
+  }
+ });
+ finalJourney
+  .to(earthGroup.position,{x:0,y:0,z:3.25,duration:.52,ease:"none"},0)
+  .to(earthGroup.scale,{x:4.15,y:4.15,z:4.15,duration:.52,ease:"none"},0)
+  .to(camera.position,{x:0,y:.1,z:10.25,duration:.52,ease:"none"},0)
+  .to(earthGroup.scale,{x:.001,y:.001,z:.001,duration:.25,ease:"none"},.48)
+  .to(keplerRoot.scale,{x:.001,y:.001,z:.001,duration:.12,ease:"power1.in"},.4)
+  .to(homecoming.scale,{x:1,y:1,z:1,duration:.34,ease:"power1.inOut"},.48)
+  .to(camera.position,{x:0,y:1.55,z:12.2,duration:.52,ease:"power1.inOut"},.48)
+  .to(camera.rotation,{x:-.105,y:0,z:0,duration:.52,ease:"power1.inOut"},.48)
+  .to(bus.position,{x:0,y:-1.47,z:1.15,duration:.38,ease:"power1.inOut"},.56)
+  .to(bus.scale,{x:mobile?.86:1.02,y:mobile?.86:1.02,z:mobile?.86:1.02,duration:.38,ease:"power1.inOut"},.56)
+  .to(bus.rotation,{x:0,y:-Math.PI/2,z:0,duration:.38,ease:"power1.inOut"},.56);
+
+ // CHAPTER 6 — transition from the lunar surface into a Mars-bound flight.
+  // Reuse the exact 3D bus and star field already built for Chapters 1–2.
+  // The Chapter 6 engine sound remains managed independently by script.js.
+  const marsJourney=gsap.timeline({
+    scrollTrigger:{trigger:marsTravelScene,start:"top top",end:"bottom top",scrub:1.1,invalidateOnRefresh:true},
+    onUpdate:()=>{
+      const travelling=marsJourney.progress()>0;
+      // Restore the bus, Moon and Mars globe only for the Mars-bound flight.
+      bus.visible=travelling;
+      moonGroup.visible=travelling;
+      marsGroup.visible=travelling;
+      earthGroup.visible=false;
+    }
+  });
+  marsJourney
+    .to(surfaceGroup.scale,{x:.001,y:.001,z:.001,duration:.24},0)
+    .to(camera.position,{x:0,y:0,z:8.6,duration:.42},0)
+    .to(camera.rotation,{x:0,y:0,z:0,duration:.42},0)
+    .to(moonGroup.position,{x:()=>isPortrait() ? -4.1 : isNarrow() ? -4.1 : -4.8,y:1.15,z:-4.8,duration:.42},0)
+    .to(moonGroup.scale,{x:.14,y:.14,z:.14,duration:.42},0)
+    .to(bus.position,{x:mobile?-1.95:-2.35,y:mobile?-.56:-.58,z:1.25,duration:.24},0)
+    .to(bus.rotation,{x:0,y:-.3,z:.045,duration:.24},0)
+    .to(bus.scale,{x:mobile?.62:.94,y:mobile?.62:.94,z:mobile?.62:.94,duration:.2},0)
+    .to(marsGroup.position,{x:()=>isPortrait() ? .9 : isNarrow() ? 1.55 : 2.55,y:.12,z:-2.9,duration:.82},.18)
+    .to(marsGroup.scale,{x:()=>isPortrait() ? .72 : isNarrow() ? .94 : 1.22,y:()=>isPortrait() ? .72 : isNarrow() ? .94 : 1.22,z:()=>isPortrait() ? .72 : isNarrow() ? .94 : 1.22,duration:.82},.18)
+    .to(bus.position,{x:mobile?-.9:-1.15,y:mobile?-.52:-.54,z:.9,duration:.72},.24)
+    .to(bus.rotation,{y:-.18,z:.018,duration:.72},.24)
+    .to(bus.scale,{x:mobile?.5:.76,y:mobile?.5:.76,z:mobile?.5:.76,duration:.72},.24);
+
+  let busFloat=null,earthSpin=null,moonSpin=null,marsSpin=null;
+ if(!reduced){
+   busFloat=gsap.to(bus.rotation,{x:.018,duration:2.7,ease:"sine.inOut",yoyo:true,repeat:-1});
+   earthSpin=gsap.to(earth.rotation,{y:Math.PI*2,duration:150,ease:"none",repeat:-1});
+   moonSpin=gsap.to(moon.rotation,{y:Math.PI*2,duration:210,ease:"none",repeat:-1});
+   marsSpin=gsap.to(marsSphere.rotation,{y:Math.PI*2,duration:185,ease:"none",repeat:-1});
+ }
+ const resize=()=>{if(disposed)return;const w=Math.max(1,mount.clientWidth||innerWidth),h=Math.max(1,mount.clientHeight||innerHeight);camera.aspect=w/h;camera.fov=(w<=620&&w/h<.8)?Math.min(82,Math.max(56,2*Math.atan(Math.tan(21*Math.PI/180)/(w/h))*180/Math.PI)):42;camera.updateProjectionMatrix();renderer.setPixelRatio(Math.min(devicePixelRatio||1,pixelCap));renderer.setSize(w,h,false);};
+ const visibleScenes=new Set();
+ const observer=new IntersectionObserver(entries=>{
+   entries.forEach(entry=>{
+     if(entry.isIntersecting)visibleScenes.add(entry.target);
+     else visibleScenes.delete(entry.target);
+   });
+   sceneVisible=visibleScenes.size>0;
+   mount.classList.toggle("is-active",sceneVisible);
+ },{threshold:.01});
+ observer.observe(landingScene);observer.observe(travelScene);observer.observe(marsTravelScene);observer.observe(surfaceScene);observer.observe(lrvScene);observer.observe(alsepScene);observer.observe(surveyorScene);observer.observe(opportunityScene);observer.observe(spiritScene);observer.observe(insightScene);observer.observe(pathfinderScene);observer.observe(returnScene);observer.observe(finalScene);
+ const visibility=()=>{pageVisible=!document.hidden;if(pageVisible)last=0;};
+ addEventListener("resize",resize,{passive:true});document.addEventListener("visibilitychange",visibility);resize();
+ const render=time=>{if(disposed)return;raf=requestAnimationFrame(render);if(!pageVisible||!sceneVisible||time-last<33)return;last=time;stars.rotation.y+=reduced?0:.00012;renderer.render(scene,camera);};
+ raf=requestAnimationFrame(render);
+ return{dispose(){
+  if(disposed)return;disposed=true;cancelAnimationFrame(raf);observer.disconnect();removeEventListener("resize",resize);document.removeEventListener("visibilitychange",visibility);
+  journey.scrollTrigger?.kill();journey.kill();arrival.scrollTrigger?.kill();arrival.kill();roverHandoff.scrollTrigger?.kill();roverHandoff.kill();scienceHandoff.scrollTrigger?.kill();scienceHandoff.kill();surveyorHandoff.scrollTrigger?.kill();surveyorHandoff.kill();marsJourney.scrollTrigger?.kill();marsJourney.kill();opportunityArrival.scrollTrigger?.kill();opportunityArrival.kill();spiritArrival.scrollTrigger?.kill();spiritArrival.kill();insightArrival.scrollTrigger?.kill();insightArrival.kill();pathfinderArrival.scrollTrigger?.kill();pathfinderArrival.kill();returnJourney.scrollTrigger?.kill();returnJourney.kill();finalJourney.scrollTrigger?.kill();finalJourney.kill();keplerLoadTrigger.kill();lrvLoadTrigger.kill();alsepLoadTrigger.kill();surveyorLoadTrigger.kill();opportunityLoadTrigger.kill();spiritLoadTrigger.kill();insightLoadTrigger.kill();pathfinderLoadTrigger.kill();busFloat?.kill();earthSpin?.kill();moonSpin?.kill();marsSpin?.kill();
+  scene.traverse(o=>{o.geometry?.dispose();if(o.material){const list=Array.isArray(o.material)?o.material:[o.material];list.forEach(m=>{Object.values(m).forEach(v=>{if(v?.isTexture)v.dispose();});m.dispose();});}});
+  renderer.dispose();renderer.domElement.remove();
+ }};
+}
